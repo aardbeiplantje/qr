@@ -58,7 +58,7 @@ docker run \
     --network dmz-ipv6-qrencode \
     --ip6 $IPV6 \
     -v qrencode-https-cert:/certs:rw\
-    ghcr.io/myrepo/certbot/certbot:latest \
+    local/certbot/certbot:latest \
         certonly \
             --agree-tos \
             --domains "$QRENCODE_DOMAIN"
