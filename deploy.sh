@@ -2,7 +2,6 @@
 export WORKSPACE=${WORKSPACE:-${BASH_SOURCE%/*}}
 export APP_NAME=${APP_NAME:-qrencode}
 export QRENCODE_DOMAIN=${QRENCODE_DOMAIN?Need to set QRENCODE_DOMAIN}
-export CERTBOT_MAIL=${CERTBOT_MAIL?Need to set CERTBOT_MAIL}
 
 echo "checking for registry auth"
 if [   ! -z "$DOCKER_REGISTRY" \
@@ -61,10 +60,11 @@ fi
 
 if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     echo "check the certtificate"
+    export CERTBOT_MAIL=${CERTBOT_MAIL?Need to set CERTBOT_MAIL}
     docker run \
         -p 80:80 \
         --rm \
-        -e CERTBOT_MAIL="$CERTBOT_MAIL" \
+        -e CERTBOT_MAIL \
         --network $nw_name \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
