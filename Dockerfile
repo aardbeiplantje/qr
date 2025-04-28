@@ -1,11 +1,24 @@
 FROM alpine:latest AS runtime
-RUN apk add --no-cache nginx nginx-mod-http-auth-jwt nginx-mod-http-headers-more nginx-mod-http-lua
+RUN apk add --no-cache \
+    nginx \
+    nginx-mod-http-auth-jwt \
+    nginx-mod-http-headers-more \
+    nginx-mod-http-lua \
+    nginx-mod-http-perl \
+    perl-uri \
+    perl-json \
+    perl-json-xs
 RUN apk add --no-cache libqrencode-tools
+RUN qrencode --version
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx.sh /nginx.sh
+COPY lib/ /app/lib/
 RUN ln -s /certs/ /etc/nginx/certs
-RUN \
-    mkdir -p /etc/nginx/certs; \
+RUN <<EOngxtest
+    export PERL5LIB=/usr/lib/perl5/vendor_perl/x86_64-linux-thread-multi
+    export TZ=GMT
     nginx -t -c /etc/nginx/nginx.conf
-RUN qrencode --version
+    err=$?
+    exit $err
+EOngxtest
 ENTRYPOINT ["/nginx.sh"]
