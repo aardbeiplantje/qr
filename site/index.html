@@ -5,12 +5,72 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="QR">
+  <title>QR Code Generator</title>
+  <style>
+    .container {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .qr-image {
+      display: none;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      resize: vertical;
+    }
+    .download-btn {
+      display: none;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-    <form action="/qr" method="post">
+  <div class="container">
+    <form id="qrForm">
         <label for="data">Enter data to encode:</label><br>
-        <input type="text" id="text" name="text"><br><br>
+        <textarea id="text" name="text" required></textarea><br><br>
         <input type="submit" value="Generate QR Code">
     </form>
+    <div class="qr-image">
+      <img id="qrCodeImage" src="" alt="QR Code">
+      <a id="downloadButton" class="download-btn" download="qrcode.png">Download QR Code</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('qrForm').addEventListener('submit', async function(event) {
+      event.preventDefault(); // Prevent the form from submitting traditionally
+
+      const textInput = document.getElementById('text').value;
+
+      // Make a POST request to the server to generate the QR code
+      const response = await fetch('/qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: textInput })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob(); // Assume the server returns the QR code as an image blob
+        const qrImageUrl = URL.createObjectURL(blob);
+
+        // Display the QR code image
+        const qrImageElement = document.getElementById('qrCodeImage');
+        qrImageElement.src = qrImageUrl;
+        qrImageElement.parentElement.style.display = 'block';
+
+        // Enable the download button
+        const downloadButton = document.getElementById('downloadButton');
+        downloadButton.href = qrImageUrl;
+        downloadButton.style.display = 'inline-block';
+      } else {
+        alert('Failed to generate QR code. Please try again.');
+      }
+    });
+  </script>
 </body>
 </html>
