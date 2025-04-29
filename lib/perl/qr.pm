@@ -93,7 +93,7 @@ sub do_qr {
     my ($r, $req) = @_;
 
     # validate
-    logger::info("validating");
+    logger::info("validating parameters");
     my $err = check_parameters($req);
     if($err){
         logger::error("invalid parameters: $err");
@@ -107,7 +107,6 @@ sub do_qr {
     }
 
     # all is well, generate the QR code
-    logger::info("generating QR code");
     my $img_data = generate_qr($req);
     if(!length($img_data//"")){
         logger::error("failed to generate QR code");
@@ -191,7 +190,7 @@ sub check_parameters {
 }
 
 sub generate_qr {
-    my ($json_body) = @_;
+    my ($qr) = @_;
     # we always "print" the to be encoded text to qrencode, so we don't use
     # arguments that need escaping and be possible fork bombs or remote shell
     # execution
@@ -199,49 +198,50 @@ sub generate_qr {
     my $t = time();
     ($::ITERATIONS//=0)++;
     my $tmp_fn_shm = "/dev/shm/qrencode-$$.$t.$::ITERATIONS.out";
-    $json_body->{level}       //= "H";
-    $json_body->{size}        //= 10;
-    $json_body->{margin}      //= 4;
-    $json_body->{color}       //= "000000";
-    $json_body->{bgcolor}     //= "FFFFFF";
-    $json_body->{type}        //= "PNG";
-    $json_body->{dpi}         //= 72;
-    $json_body->{micro}       //= 0;
-    $json_body->{kanji}       //= 0;
-    $json_body->{eightbit}    //= 0;
-    $json_body->{ignorecase}  //= 0;
-    $json_body->{symversion}  //= 4;
+    logger::info("generating QR code $tmp_fn_shm");
+    $qr->{level}       //= "H";
+    $qr->{size}        //= 10;
+    $qr->{margin}      //= 4;
+    $qr->{color}       //= "000000";
+    $qr->{bgcolor}     //= "FFFFFF";
+    $qr->{type}        //= "PNG";
+    $qr->{dpi}         //= 72;
+    $qr->{micro}       //= 0;
+    $qr->{kanji}       //= 0;
+    $qr->{eightbit}    //= 0;
+    $qr->{ignorecase}  //= 0;
+    $qr->{symversion}  //= 4;
     open(my $fh, "|-", "qrencode",
             "-o", $tmp_fn_shm,
-            $json_body->{size}
-                ? ("-s", $json_body->{size}):(),
-            $json_body->{level}
-                ? ("-l", $json_body->{level}):(),
-            $json_body->{margin}
-                ? ("-m", $json_body->{margin}):(),
-            $json_body->{color}
-                ? ("--foreground", $json_body->{color}):(),
-            $json_body->{bgcolor}
-                ? ("--background", $json_body->{bgcolor}):(),
-            $json_body->{type}
-                ? ("-t", $json_body->{type}):(),
-            $json_body->{dpi}
-                ? ("-d", $json_body->{dpi}):(),
-            $json_body->{micro}
-                ? ("-M", $json_body->{micro}):(),
-            $json_body->{kanji}
-                ? ("-k", $json_body->{kanji}):(),
-            $json_body->{eightbit}
-                ? ("-8", $json_body->{eightbit}):(),
-            $json_body->{ignorecase}
-                ? ("-i", $json_body->{ignorecase}):(),
-            $json_body->{symversion}
-                ? ("-v", $json_body->{symversion}):(),
+            $qr->{size}
+                ? ("-s", $qr->{size}):(),
+            $qr->{level}
+                ? ("-l", $qr->{level}):(),
+            $qr->{margin}
+                ? ("-m", $qr->{margin}):(),
+            $qr->{color}
+                ? ("--foreground", $qr->{color}):(),
+            $qr->{bgcolor}
+                ? ("--background", $qr->{bgcolor}):(),
+            $qr->{type}
+                ? ("-t", $qr->{type}):(),
+            $qr->{dpi}
+                ? ("-d", $qr->{dpi}):(),
+            $qr->{micro}
+                ? ("-M", $qr->{micro}):(),
+            $qr->{kanji}
+                ? ("-k", $qr->{kanji}):(),
+            $qr->{eightbit}
+                ? ("-8", $qr->{eightbit}):(),
+            $qr->{ignorecase}
+                ? ("-i", $qr->{ignorecase}):(),
+            $qr->{symversion}
+                ? ("-v", $qr->{symversion}):(),
         )
         or die "Could not open qrencode: $!";
     binmode($fh);
-    Encode::_utf8_off($json_body->{text});
-    print {$fh} $json_body->{text};
+    Encode::_utf8_off($qr->{text});
+    print {$fh} $qr->{text};
     if(!close($fh)){
         my $err = $!;
         if($?){
@@ -256,6 +256,14 @@ sub generate_qr {
     }
 
     # read the generated file
+    my $logo_fn = "/app/site/logo.png";
+    if(-s $logo_fn){
+        logger::info("adding logo with logo: $logo_fn");
+        system("magick", $tmp_fn_shm, $logo_fn, "-compose", "over", "-gravity", "center", "-composite", $tmp_fn_shm) == 0
+            or die "Could not convert logo: $!";
+    }
+
+    logger::info("reading QR code $tmp_fn_shm");
     open($fh, "<", $tmp_fn_shm)
         or die "Could not open $tmp_fn_shm: $!";
     my $img_data = do {local $/; <$fh>};
@@ -330,7 +338,5 @@ sub do_log {
     print STDERR "$msg\n";
     return;
 }
-
-1;
 
 1;
