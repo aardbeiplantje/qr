@@ -90,6 +90,7 @@ docker run \
     -d \
     --network $nw_name \
     --ip6 $IPV6 \
+    --shm-size=4m \
     --name $APP_NAME \
     $extra_volume \
     -v ${QRENCODE_CERT_VOLUME}:/certs:ro \
