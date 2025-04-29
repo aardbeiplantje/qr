@@ -72,6 +72,7 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
         local/certbot/certbot:latest \
             certonly \
                 --agree-tos \
+                --force-renewal \
                 --domains "$QRENCODE_DOMAIN"
 else
     echo "no certbot"
