@@ -1,4 +1,4 @@
-FROM alpine:latest AS runtime
+FROM alpine:3 AS runtime
 RUN apk add --no-cache \
     nginx \
     nginx-mod-http-auth-jwt \
@@ -16,6 +16,7 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx.sh /nginx.sh
 COPY site/ /app/site/
 COPY lib/ /app/lib/
+COPY policy.xml /etc/ImageMagick-7/policy.xml
 RUN ln -s /certs/ /etc/nginx/certs
 RUN <<EOngxtest
     export PERL5LIB=/usr/lib/perl5/vendor_perl/x86_64-linux-thread-multi
