@@ -12,6 +12,7 @@ RUN apk add --no-cache libqrencode-tools
 RUN qrencode --version
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx.sh /nginx.sh
+COPY site/ /app/site/
 COPY lib/ /app/lib/
 RUN ln -s /certs/ /etc/nginx/certs
 RUN <<EOngxtest

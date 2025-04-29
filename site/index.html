@@ -1,0 +1,16 @@
+<!-- static site for QR code generator -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="QR">
+</head>
+<body>
+    <form action="/qr" method="post">
+        <label for="data">Enter data to encode:</label><br>
+        <input type="text" id="text" name="text"><br><br>
+        <input type="submit" value="Generate QR Code">
+    </form>
+</body>
+</html>
