@@ -4,38 +4,149 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="QR">
+  <meta name="description" content="QR Code Generator">
   <title>QR Code Generator</title>
   <style>
-    .container {
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
       display: flex;
-      align-items: flex-start;
-      gap: 20px;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    .qr-image {
-      display: none;
-    }
-    textarea {
+
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      max-width: 600px;
       width: 100%;
-      height: 100px;
-      resize: vertical;
     }
+
+    h1 {
+      text-align: center;
+      color: #333333;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .settings-group {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+
+    .settings-group label {
+      font-size: 14px;
+      font-weight: bold;
+      color: #555555;
+    }
+
+    .settings-group input {
+      font-size: 14px;
+      padding: 5px;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
+      width: 60px;
+      box-sizing: border-box;
+    }
+
+    textarea, input[type="checkbox"], input[type="submit"] {
+      font-size: 16px;
+      padding: 8px;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+
+    input[type="submit"] {
+      background-color: #007bff;
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+
     .download-btn {
       display: none;
-      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+
+    .download-btn:hover {
+      background-color: #218838;
+    }
+
+    .qr-image {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .qr-image img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <h1>QR Code Generator</h1>
     <form id="qrForm">
-        <label for="data">Enter data to encode:</label><br>
-        <textarea id="text" name="text" required></textarea><br><br>
-        <input type="submit" value="Generate QR Code">
+        <label for="data">Enter data to encode:</label>
+        <textarea id="text" name="text" required></textarea>
+
+        <div class="settings-group">
+          <label for="margin">Margin:</label>
+          <input type="number" id="margin" name="margin" min="0" value="4">
+
+          <label for="size">Size:</label>
+          <input type="number" id="size" name="size" min="1" value="3">
+
+          <label for="dpi">DPI:</label>
+          <input type="number" id="dpi" name="dpi" min="72" value="72">
+        </div>
+
+        <label for="ignorecase">
+          <input type="checkbox" id="ignorecase" name="ignorecase" value="1">
+          Ignore Case
+        </label>
+
+        <div class="button-group">
+          <input type="submit" value="Generate">
+          <a id="downloadButton" class="download-btn" download="qrcode.png">Download</a>
+        </div>
     </form>
     <div class="qr-image">
       <img id="qrCodeImage" src="" alt="QR Code">
-      <a id="downloadButton" class="download-btn" download="qrcode.png">Download QR Code</a>
     </div>
   </div>
 
@@ -44,6 +155,10 @@
       event.preventDefault(); // Prevent the form from submitting traditionally
 
       const textInput = document.getElementById('text').value;
+      const marginInput = document.getElementById('margin').value;
+      const sizeInput = document.getElementById('size').value;
+      const dpiInput = document.getElementById('dpi').value;
+      const ignorecaseInput = document.getElementById('ignorecase').checked ? 1 : 0;
 
       // Make a POST request to the server to generate the QR code
       const response = await fetch('/qr', {
@@ -51,7 +166,13 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text: textInput })
+        body: JSON.stringify({
+          text: textInput,
+          margin: marginInput,
+          size: sizeInput,
+          dpi: dpiInput,
+          ignorecase: ignorecaseInput
+        })
       });
 
       if (response.ok) {
