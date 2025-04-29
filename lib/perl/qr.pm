@@ -195,6 +195,8 @@ sub generate_qr {
     # arguments that need escaping and be possible fork bombs or remote shell
     # execution
     # we also use the ARG version of open so we don't pass through the shell
+    $qr->{logo} //= 0; # Default to no logo
+
     my $t = time();
     ($::ITERATIONS//=0)++;
     my $tmp_fn_shm = "/dev/shm/qrencode-$$.$t.$::ITERATIONS.out";
@@ -252,6 +254,18 @@ sub generate_qr {
         } else {
             logger::error("qrencode failed: $err");
             return;
+        }
+    }
+
+    # Add logo if enabled
+    if ($qr->{logo}) {
+        my $logo_fn = "/app/site/logo.png";
+        if (-s $logo_fn) {
+            logger::info("adding logo with file: $logo_fn");
+            system("magick", $tmp_fn_shm, $logo_fn, "-compose", "over", "-gravity", "center", "-composite", $tmp_fn_shm) == 0
+                or die "Could not add logo: $!";
+        } else {
+            logger::warn("logo file not found: $logo_fn");
         }
     }
 

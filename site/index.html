@@ -140,6 +140,11 @@
           Ignore Case
         </label>
 
+        <label for="logo">
+          <input type="checkbox" id="logo" name="logo" value="1">
+          Include Logo
+        </label>
+
         <div class="button-group">
           <input type="submit" value="Generate">
           <a id="downloadButton" class="download-btn" download="qrcode.png">Download</a>
@@ -159,6 +164,7 @@
       const sizeInput = document.getElementById('size').value;
       const dpiInput = document.getElementById('dpi').value;
       const ignorecaseInput = document.getElementById('ignorecase').checked ? 1 : 0;
+      const logoInput = document.getElementById('logo').checked ? 1 : 0;
 
       // Make a POST request to the server to generate the QR code
       const response = await fetch('/qr', {
@@ -171,7 +177,8 @@
           margin: marginInput,
           size: sizeInput,
           dpi: dpiInput,
-          ignorecase: ignorecaseInput
+          ignorecase: ignorecaseInput,
+          logo: logoInput
         })
       });
 
