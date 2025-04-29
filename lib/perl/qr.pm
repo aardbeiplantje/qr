@@ -261,9 +261,30 @@ sub generate_qr {
     if($qr->{logo}){
         my $logo_fn = "/app/site/logo.png";
         if(-s $logo_fn){
+            my $resized_logo_fn = "/dev/shm/logo_resized.$$.$t.$::ITERATIONS.png";
             logger::info("adding logo with file: $logo_fn");
-            system("magick", $tmp_fn_shm, $logo_fn, "-compose", "over", "-gravity", "center", "-composite", $tmp_fn_shm) == 0
-                or die "Could not add logo: $!";
+            # Calculate the effective size of the QR code (size + margin)
+            # 17 + 4 * version is the QR code size in modules
+            my $qr_size = $qr->{size} * (17 + 4 * $qr->{symversion});
+            my $margin_size = $qr->{margin} * $qr->{size};
+            my $effective_size = $qr_size + 2 * $margin_size;
+
+            # Resize the logo to fit within the QR code
+            # Logo should be 25% of the QR code size
+            my $logo_size = int($qr_size * 0.25);
+            system("magick", $logo_fn, 
+                    "-resize", "${logo_size}x${logo_size}",
+                    $resized_logo_fn) == 0
+                or die "Could not resize logo: $!";
+
+            # Overlay the resized logo onto the QR code
+            system("magick", $tmp_fn_shm, $resized_logo_fn,
+                    "-compose", "over",
+                    "-gravity", "center",
+                    "-composite", $tmp_fn_shm) == 0
+                or die "Could not overlay logo: $!";
+            unlink($resized_logo_fn)
+                or logger::error("Could not delete resized logo: $!");
         } else {
             logger::warn("logo file not found: $logo_fn");
         }
@@ -274,7 +295,8 @@ sub generate_qr {
         or die "Could not open $tmp_fn_shm: $!";
     my $img_data = do {local $/; <$fh>};
     close($fh);
-    unlink($tmp_fn_shm);
+    unlink($tmp_fn_shm)
+        or logger::error("Could not delete $tmp_fn_shm: $!");
     return $img_data;
 }
 
