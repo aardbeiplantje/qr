@@ -195,11 +195,14 @@ sub generate_qr {
     # arguments that need escaping and be possible fork bombs or remote shell
     # execution
     # we also use the ARG version of open so we don't pass through the shell
-    $qr->{logo} //= 0; # Default to no logo
 
+    # tmp fn suffix
     my $t = time();
     ($::ITERATIONS//=0)++;
-    my $tmp_fn_shm = "/dev/shm/qrencode-$$.$t.$::ITERATIONS.out";
+    $::ITERATIONS %= 1000;
+    my $suffix = "$$.$t.$::ITERATIONS.png";
+
+    my $tmp_fn_shm = "/dev/shm/qrencode-$suffix";
     logger::info("generating QR code $tmp_fn_shm");
     $qr->{level}       //= "H";
     $qr->{size}        //= 10;
@@ -214,33 +217,20 @@ sub generate_qr {
     $qr->{ignorecase}  //= 0;
     $qr->{symversion}  //= 4;
     open(my $fh, "|-", "qrencode",
-            "-o", $tmp_fn_shm,
-            $qr->{size}
-                ? ("-s", $qr->{size}):(),
-            $qr->{level}
-                ? ("-l", $qr->{level}):(),
-            $qr->{margin}
-                ? ("-m", $qr->{margin}):(),
-            $qr->{color}
-                ? ("--foreground", $qr->{color}):(),
-            $qr->{bgcolor}
-                ? ("--background", $qr->{bgcolor}):(),
-            $qr->{type}
-                ? ("-t", $qr->{type}):(),
-            $qr->{dpi}
-                ? ("-d", $qr->{dpi}):(),
-            $qr->{micro}
-                ? ("-M", $qr->{micro}):(),
-            $qr->{kanji}
-                ? ("-k", $qr->{kanji}):(),
-            $qr->{eightbit}
-                ? ("-8", $qr->{eightbit}):(),
-            $qr->{ignorecase}
-                ? ("-i", $qr->{ignorecase}):(),
-            $qr->{symversion}
-                ? ("-v", $qr->{symversion}):(),
-        )
-        or die "Could not open qrencode: $!";
+        "-o", $tmp_fn_shm,
+        $qr->{size}       ? ("-s", $qr->{size}):(),
+        $qr->{level}      ? ("-l", $qr->{level}):(),
+        $qr->{margin}     ? ("-m", $qr->{margin}):(),
+        $qr->{color}      ? ("--foreground", $qr->{color}):(),
+        $qr->{bgcolor}    ? ("--background", $qr->{bgcolor}):(),
+        $qr->{type}       ? ("-t", $qr->{type}):(),
+        $qr->{dpi}        ? ("-d", $qr->{dpi}):(),
+        $qr->{micro}      ? ("-M", $qr->{micro}):(),
+        $qr->{kanji}      ? ("-k", $qr->{kanji}):(),
+        $qr->{eightbit}   ? ("-8", $qr->{eightbit}):(),
+        $qr->{ignorecase} ? ("-i", $qr->{ignorecase}):(),
+        $qr->{symversion} ? ("-v", $qr->{symversion}):(),
+    ) or die "Could not open qrencode: $!";
     binmode($fh);
     Encode::_utf8_off($qr->{text});
     print {$fh} $qr->{text};
@@ -261,10 +251,10 @@ sub generate_qr {
     if($qr->{logo}){
         my $logo_fn = "/app/site/logo.png";
         if(-s $logo_fn){
-            my $resized_logo_fn = "/dev/shm/logo_resized.$$.$t.$::ITERATIONS.png";
             logger::info("adding logo with file: $logo_fn");
+
             # Calculate the effective size of the QR code (size + margin)
-            # 17 + 4 * version is the QR code size in modules
+            # QR code size in modules
             my $qr_size = $qr->{size} * (17 + 4 * $qr->{symversion});
             my $margin_size = $qr->{margin} * $qr->{size};
             my $effective_size = $qr_size + 2 * $margin_size;
@@ -272,19 +262,34 @@ sub generate_qr {
             # Resize the logo to fit within the QR code
             # Logo should be 25% of the QR code size
             my $logo_size = int($qr_size * 0.25);
-            system("magick", $logo_fn, 
-                    "-resize", "${logo_size}x${logo_size}",
-                    $resized_logo_fn) == 0
+            # Border size matches the pixel size of the QR code
+            my $border_size = $qr->{size};
+
+            # Resize the logo
+            my $resized_logo_fn = "/dev/shm/l_r.$suffix";
+            system("magick", $logo_fn,
+                   "-resize", "${logo_size}x${logo_size}",
+                   $resized_logo_fn) == 0
                 or die "Could not resize logo: $!";
 
-            # Overlay the resized logo onto the QR code
-            system("magick", $tmp_fn_shm, $resized_logo_fn,
-                    "-compose", "over",
-                    "-gravity", "center",
-                    "-composite", $tmp_fn_shm) == 0
-                or die "Could not overlay logo: $!";
+            # Add a white border around the resized logo
+            my $bordered_logo_fn = "/dev/shm/l_b.$suffix";
+            system("magick", $resized_logo_fn,
+                   "-bordercolor", "white",
+                   "-border", "${border_size}x${border_size}",
+                   $bordered_logo_fn) == 0
+                or die "Could not add border to logo: $!";
             unlink($resized_logo_fn)
                 or logger::error("Could not delete resized logo: $!");
+
+            # Overlay the bordered logo onto the QR code
+            system("magick", $tmp_fn_shm, $bordered_logo_fn,
+                   "-compose", "over",
+                   "-gravity", "center",
+                   "-composite", $tmp_fn_shm) == 0
+                or die "Could not overlay logo: $!";
+            unlink($bordered_logo_fn)
+                or logger::error("Could not delete bordered logo: $!");
         } else {
             logger::warn("logo file not found: $logo_fn");
         }
