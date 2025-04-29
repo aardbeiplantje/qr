@@ -258,23 +258,15 @@ sub generate_qr {
     }
 
     # Add logo if enabled
-    if ($qr->{logo}) {
+    if($qr->{logo}){
         my $logo_fn = "/app/site/logo.png";
-        if (-s $logo_fn) {
+        if(-s $logo_fn){
             logger::info("adding logo with file: $logo_fn");
             system("magick", $tmp_fn_shm, $logo_fn, "-compose", "over", "-gravity", "center", "-composite", $tmp_fn_shm) == 0
                 or die "Could not add logo: $!";
         } else {
             logger::warn("logo file not found: $logo_fn");
         }
-    }
-
-    # read the generated file
-    my $logo_fn = "/app/site/logo.png";
-    if(-s $logo_fn){
-        logger::info("adding logo with logo: $logo_fn");
-        system("magick", $tmp_fn_shm, $logo_fn, "-compose", "over", "-gravity", "center", "-composite", $tmp_fn_shm) == 0
-            or die "Could not convert logo: $!";
     }
 
     logger::info("reading QR code $tmp_fn_shm");
