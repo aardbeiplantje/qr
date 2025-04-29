@@ -78,7 +78,12 @@ else
     echo "no certbot"
 fi
 
-echo "stopping $APP_NAME and restarting"
+if [ -d ${WORKSPACE}/site ]; then
+    echo "stopping $APP_NAME and restarting development mode"
+    extra_volume="-v ${WORKSPACE}/site:/app/site:ro"
+else
+    echo "stopping $APP_NAME and restarting"
+fi
 docker run \
     -p 443:443 \
     --rm \
@@ -86,5 +91,6 @@ docker run \
     --network $nw_name \
     --ip6 $IPV6 \
     --name $APP_NAME \
+    $extra_volume \
     -v ${QRENCODE_CERT_VOLUME}:/certs:ro \
     local/qrencode/qrencode
