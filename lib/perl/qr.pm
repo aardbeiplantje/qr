@@ -133,7 +133,8 @@ sub check_parameters {
         return "invalid text parameter";
     }
     if(length($req->{size}//"")
-        and $req->{size} !~ /^\d+$/){
+        and $req->{size} !~ /^\d+$/
+        and ($req->{size} < 1 or $req->{size} > 5000)){
         return "invalid size parameter";
     }
     if(length($req->{level}//"")
@@ -141,7 +142,8 @@ sub check_parameters {
         return "invalid level parameter";
     }
     if(length($req->{margin}//"")
-        and $req->{margin} !~ /^\d+$/){
+        and $req->{margin} !~ /^\d+$/
+        and ($req->{margin} < 0 or $req->{margin} > 200)){
         return "invalid margin parameter";
     }
     if(length($req->{color}//"")
@@ -163,7 +165,8 @@ sub check_parameters {
         return "invalid ignorecase parameter";
     }
     if(length($req->{dpi}//"")
-        and $req->{dpi} !~ /^\d+$/){
+        and $req->{dpi} !~ /^\d+$/
+        and ($req->{dpi} < 1 or $req->{dpi} > 1200)){
         return "invalid dpi parameter";
     }
     if(length($req->{micro}//"")
@@ -178,6 +181,11 @@ sub check_parameters {
         and $req->{eightbit} !~ /^(0|1)$/){
         die "invalid 8bit parameter";
     }
+    if(length($req->{symversion}//"")
+        and $req->{symversion} !~ /^\d+$/
+        and ($req->{symversion} < 1 or $req->{symversion} > 40)){
+        return "invalid symversion parameter";
+    }
 
     return;
 }
@@ -191,6 +199,18 @@ sub generate_qr {
     my $t = time();
     ($::ITERATIONS//=0)++;
     my $tmp_fn_shm = "/dev/shm/qrencode-$$.$t.$::ITERATIONS.out";
+    $json_body->{level}       //= "H";
+    $json_body->{size}        //= 10;
+    $json_body->{margin}      //= 4;
+    $json_body->{color}       //= "000000";
+    $json_body->{bgcolor}     //= "FFFFFF";
+    $json_body->{type}        //= "PNG";
+    $json_body->{dpi}         //= 72;
+    $json_body->{micro}       //= 0;
+    $json_body->{kanji}       //= 0;
+    $json_body->{eightbit}    //= 0;
+    $json_body->{ignorecase}  //= 0;
+    $json_body->{symversion}  //= 4;
     open(my $fh, "|-", "qrencode",
             "-o", $tmp_fn_shm,
             $json_body->{size}
@@ -200,9 +220,9 @@ sub generate_qr {
             $json_body->{margin}
                 ? ("-m", $json_body->{margin}):(),
             $json_body->{color}
-                ? ("-c", $json_body->{color}):(),
+                ? ("--foreground", $json_body->{color}):(),
             $json_body->{bgcolor}
-                ? ("-b", $json_body->{bgcolor}):(),
+                ? ("--background", $json_body->{bgcolor}):(),
             $json_body->{type}
                 ? ("-t", $json_body->{type}):(),
             $json_body->{dpi}
@@ -214,7 +234,9 @@ sub generate_qr {
             $json_body->{eightbit}
                 ? ("-8", $json_body->{eightbit}):(),
             $json_body->{ignorecase}
-                ? ("-i", $json_body->{ignorecase}):()
+                ? ("-i", $json_body->{ignorecase}):(),
+            $json_body->{symversion}
+                ? ("-v", $json_body->{symversion}):(),
         )
         or die "Could not open qrencode: $!";
     binmode($fh);
@@ -225,9 +247,11 @@ sub generate_qr {
         if($?){
             my $exit_c = $? >> 8;
             my $signal = $? & 127;
-            logger::error("qrencode failed: $err, exit code: $exit_c, signal: $signal");
+            logger::error("qrencode failed: exit code: $exit_c, signal: $signal".($err?" ($err)":""));
+            return;
         } else {
             logger::error("qrencode failed: $err");
+            return;
         }
     }
 
