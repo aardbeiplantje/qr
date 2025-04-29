@@ -9,7 +9,6 @@ use strict; use warnings;
 
 use nginx;
 use Encode;
-use JSON;
 use URI;
 use URI::QueryParam;
 
@@ -61,7 +60,8 @@ sub handle_qr_post {
         my $ct = $r->header_in("Content-Type");
         die "wrong Content-Type: $ct\n"
             if $ct !~ m/^application\/json/i;
-        $req = decode_json($r->request_body);
+        require JSON;
+        $req = JSON::decode_json($r->request_body);
         $r->discard_request_body;
     };
     if($@){
