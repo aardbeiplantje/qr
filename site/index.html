@@ -145,6 +145,26 @@
         width: 100%;
       }
     }
+
+    .message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      display: none; /* Hidden by default */
+    }
+
+    .message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
   </style>
 </head>
 <body>
@@ -175,26 +195,78 @@
           Include Logo
         </label>
 
+        <!-- CSRF Token -->
+        <input type="hidden" id="csrfToken" name="csrfToken" value="">
+
         <div class="button-group">
           <input type="submit" value="Generate">
           <a id="downloadButton" class="download-btn" download="qrcode.png">Download</a>
         </div>
     </form>
+
+    <!-- Message area -->
+    <div id="message" class="message"></div>
+
     <div class="qr-image">
       <img id="qrCodeImage" src="" alt="QR Code">
     </div>
   </div>
 
   <script>
+    // Generate a CSRF token and set it in the hidden input field
+    function generateCsrfToken() {
+      const array = new Uint8Array(16);
+      window.crypto.getRandomValues(array);
+      return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    document.getElementById('csrfToken').value = generateCsrfToken();
+
+    // Input sanitization function
+    function sanitizeInput(input) {
+      const div = document.createElement('div');
+      div.textContent = input;
+      return div.innerHTML;
+    }
+
+    // Function to display messages
+    function displayMessage(type, text) {
+      const messageElement = document.getElementById('message');
+      messageElement.className = `message ${type}`;
+      messageElement.textContent = text;
+      messageElement.style.display = 'block';
+    }
+
+    // Form submission handler
     document.getElementById('qrForm').addEventListener('submit', async function(event) {
       event.preventDefault(); // Prevent the form from submitting traditionally
 
-      const textInput = document.getElementById('text').value;
-      const marginInput = document.getElementById('margin').value;
-      const sizeInput = document.getElementById('size').value;
-      const dpiInput = document.getElementById('dpi').value;
+      // Sanitize inputs
+      const textInput = sanitizeInput(document.getElementById('text').value);
+      const marginInput = sanitizeInput(document.getElementById('margin').value);
+      const sizeInput = sanitizeInput(document.getElementById('size').value);
+      const dpiInput = sanitizeInput(document.getElementById('dpi').value);
       const ignorecaseInput = document.getElementById('ignorecase').checked ? 1 : 0;
       const logoInput = document.getElementById('logo').checked ? 1 : 0;
+      const csrfToken = document.getElementById('csrfToken').value;
+
+      // Validate inputs
+      if (!textInput.trim()) {
+        displayMessage('error', 'Text input cannot be empty.');
+        return;
+      }
+      if (marginInput < 0) {
+        displayMessage('error', 'Margin must be 0 or greater.');
+        return;
+      }
+      if (sizeInput < 1) {
+        displayMessage('error', 'Size must be 1 or greater.');
+        return;
+      }
+      if (dpiInput < 72) {
+        displayMessage('error', 'DPI must be 72 or greater.');
+        return;
+      }
 
       // Make a POST request to the server to generate the QR code
       const response = await fetch('/qr', {
@@ -208,7 +280,8 @@
           size: sizeInput,
           dpi: dpiInput,
           ignorecase: ignorecaseInput,
-          logo: logoInput
+          logo: logoInput,
+          csrfToken: csrfToken
         })
       });
 
@@ -225,8 +298,11 @@
         const downloadButton = document.getElementById('downloadButton');
         downloadButton.href = qrImageUrl;
         downloadButton.style.display = 'inline-block';
+
+        // Display success message
+        displayMessage('success', 'QR Code generated successfully!');
       } else {
-        alert('Failed to generate QR code. Please try again.');
+        displayMessage('error', 'Failed to generate QR code. Please try again.');
       }
     });
   </script>
