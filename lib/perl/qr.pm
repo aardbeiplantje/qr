@@ -15,11 +15,10 @@ use URI::QueryParam;
 
 sub generate {
     my ($r) = @_;
-    print STDERR "generate\n";
     my $resp = eval {handle_qr($r)};
     if($@){
         chomp(my $err = $@);
-        print STDERR "Error: $err\n";
+        logger::error("error: $err");
         return HTTP_BAD_REQUEST;
     }
     return $resp;
@@ -28,7 +27,7 @@ sub generate {
 sub handle_qr {
     my ($r) = @_;
     my $method = $r->request_method;
-    print STDERR "handling $method\n";
+    logger::info("handling $method");
 
     # fast/simple check
     return HTTP_BAD_REQUEST
@@ -40,7 +39,7 @@ sub handle_qr {
 
     # check query args
     if($method =~ m/^(GET)$/i and length($r->args//"")){
-        print STDERR "args: ", $r->args, "\n";
+        logger::info("handling GET, args: ".$r->args);
         my $u = URI->new();
         $u->query($r->args);
         my %req;
@@ -66,7 +65,8 @@ sub handle_qr_post {
         $r->discard_request_body;
     };
     if($@){
-        print STDERR "invalid JSON: $@\n";
+        chomp(my $err = $@);
+        logger::error("error decoding json: $err");
         $r->header_only;
         $r->header_out("Content-Length", 0);
         $r->header_out("Connection", "close");
@@ -84,10 +84,10 @@ sub do_qr {
     my ($r, $req) = @_;
 
     # validate
-    print STDERR "validating\n";
+    logger::info("validating");
     my $err = check_parameters($req);
     if($err){
-        print STDERR "invalid parameters: $err\n";
+        logger::error("invalid parameters: $err");
         $r->header_only;
         $r->header_out("Content-Length", 0);
         $r->header_out("Connection", "close");
@@ -98,10 +98,10 @@ sub do_qr {
     }
 
     # all is well, generate the QR code
-    print STDERR "generating\n";
+    logger::info("generating QR code");
     my $img_data = generate_qr($req);
     if(!length($img_data//"")){
-        print STDERR "qrencode failed\n";
+        logger::error("failed to generate QR code");
         $r->header_only;
         $r->header_out("Content-Length", 0);
         $r->header_out("Connection", "close");
@@ -216,9 +216,9 @@ sub generate_qr {
         if($?){
             my $exit_c = $? >> 8;
             my $signal = $? & 127;
-            print STDERR "qrencode failed: $exit_c, $signal, $err\n";
+            logger::error("qrencode failed: $err, exit code: $exit_c, signal: $signal");
         } else {
-            print STDERR "qrencode failed: $err\n";
+            logger::error("qrencode failed: $err");
         }
     }
 
@@ -230,5 +230,74 @@ sub generate_qr {
     unlink($tmp_fn_shm);
     return $img_data;
 }
+
+package logger;
+
+use strict; use warnings;
+
+our $_json_printer;
+our $_init_syslog;
+our $_syslog_logger;
+
+*fatal = *log_fatal;
+*error = *log_error;
+*info  = *log_info;
+*debug = *log_debug;
+
+sub log_fatal {
+    my (@msg) = @_;
+    my $msg = do_log("error", @msg);
+    die "$msg\n";
+}
+
+sub log_error {
+    my (@msg) = @_;
+    return do_log("error", @msg);
+}
+
+sub log_info {
+    my (@msg) = @_;
+    return do_log("info", @msg);
+}
+
+sub log_debug {
+    my (@msg) = @_;
+    no warnings 'once';
+    require Data::Dumper;
+    local $Data::Dumper::Sortkeys = 1;
+    local $Data::Dumper::Indent   = 0;
+    local $Data::Dumper::Terse    = 1;
+    local $Data::Dumper::Deepcopy = 1;
+    return do_log("debug", map {ref($_)?Data::Dumper::Dumper($_):$_} @msg);
+}
+
+sub do_log {
+    my ($w, @msg) = @_;
+    require POSIX;
+    require Time::HiRes;
+    local $::LOG_PREFIX = $::LOG_PREFIX // "";
+    @msg =
+        map {split m/\n/, $_//""}
+        join("",
+        map {defined $_ and ref($_)
+            ?do {
+                $_ = eval {
+                    require JSON;
+                    $_json_printer //= JSON->new->canonical->allow_nonref->allow_unknown->allow_blessed->convert_blessed->allow_tags->indent(0);
+                    $_json_printer->encode($_);
+                };
+                $_//"";
+            }
+            :$_//""
+        } @msg);
+    my ($tm, $usec) = Time::HiRes::gettimeofday();
+    $usec = sprintf("%06d", $usec);
+    my @tm = localtime($tm);
+    my $msg = join("\n", map {POSIX::strftime("%H:%M:%S.$usec", @tm)." [$$] [$w]: $::LOG_PREFIX$_"} map {split m/\n/, $_//""} @msg);
+    print STDERR "$msg\n";
+    return;
+}
+
+1;
 
 1;
