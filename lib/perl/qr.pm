@@ -58,11 +58,20 @@ sub handle_qr_post {
     my $req;
     eval {
         my $ct = $r->header_in("Content-Type");
-        die "wrong Content-Type: $ct\n"
-            if $ct !~ m/^application\/json/i;
-        require JSON;
-        $req = JSON::decode_json($r->request_body);
-        $r->discard_request_body;
+        if($ct =~ m/^application\/json$/i){
+            require JSON;
+            $req = JSON::decode_json($r->request_body);
+            $r->discard_request_body;
+        } elsif($ct =~ m/^application\/x-www-form-urlencoded$/i) {
+            my $u = URI->new();
+            $u->query($r->request_body);
+            $req = {};
+            foreach my $k ($u->query_param){
+                $req->{$k} = $u->query_param($k);
+            }
+        } else {
+            die "wrong Content-Type: $ct\n"
+        }
     };
     if($@){
         chomp(my $err = $@);
