@@ -32,6 +32,11 @@ use URI::QueryParam;
 use File::Temp ();
 use File::Path ();
 
+my @allowed_fields = qw(
+    text size level margin color bgcolor type dpi micro kanji eightbit
+    ignorecase symversion logo
+);
+
 sub generate {
     my ($r) = @_;
     my $resp = eval {handle_qr($r)};
@@ -59,16 +64,24 @@ sub handle_qr {
     # check query args
     if($method =~ m/^(GET)$/i and length($r->args//"")){
         logger::info("handling GET, args: ".$r->args);
-        my $u = URI->new();
-        $u->query($r->args);
-        my %req;
-        foreach my $k ($u->query_param){
-            $req{$k} = $u->query_param($k);
-        }
-        return do_qr($r, \%req);
+        my $req = _post_fields($r->args)
+            // return HTTP_BAD_REQUEST;
+        return do_qr($r, $req);
     }
 
     return HTTP_BAD_REQUEST;
+}
+
+sub _post_fields {
+    my ($pf) = @_;
+    my $u = URI->new();
+    $u->query($pf);
+    my %req;
+    foreach my $k ($u->query_param){
+        return if !grep {$_ eq $k} @allowed_fields;
+        $req{$k} = $u->query_param($k);
+    }
+    return \%req;
 }
 
 sub handle_qr_post {
@@ -81,17 +94,13 @@ sub handle_qr_post {
         if($ct =~ m/^application\/json$/i){
             require JSON;
             $req = JSON::decode_json($r->request_body);
-            $r->discard_request_body;
         } elsif($ct =~ m/^application\/x-www-form-urlencoded$/i) {
-            my $u = URI->new();
-            $u->query($r->request_body);
-            $req = {};
-            foreach my $k ($u->query_param){
-                $req->{$k} = $u->query_param($k);
-            }
+            $req = _post_fields($r->request_body)
+                // die "invalid form data";
         } else {
             die "wrong Content-Type: $ct\n"
         }
+        $r->discard_request_body;
     };
     if($@){
         chomp(my $err = $@);
@@ -243,7 +252,8 @@ sub generate_qr {
     $qr->{eightbit}    //= 0;
     $qr->{ignorecase}  //= 0;
     $qr->{symversion}  //= 4;
-    open(my $fh, "|-", "qrencode",
+    my @qr_cmd = (
+        "qrencode",
         "-o", $tmp_fn_shm,
         $qr->{size}       ? ("-s", $qr->{size}):(),
         $qr->{level}      ? ("-l", $qr->{level}):(),
@@ -257,7 +267,9 @@ sub generate_qr {
         $qr->{eightbit}   ? ("-8", $qr->{eightbit}):(),
         $qr->{ignorecase} ? ("-i", $qr->{ignorecase}):(),
         $qr->{symversion} ? ("-v", $qr->{symversion}):(),
-    ) or die "Could not open qrencode: $!";
+    );
+    logger::info("qrencode command: ".join(" ", @qr_cmd));
+    open(my $fh, "|-", @qr_cmd) or die "Could not open qrencode: $!";
     binmode($fh);
     Encode::_utf8_off($qr->{text});
     print {$fh} $qr->{text};
