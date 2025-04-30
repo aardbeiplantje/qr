@@ -214,7 +214,12 @@ sub check_parameters {
         and ($req->{symversion} < 1 or $req->{symversion} > 40)){
         return "invalid symversion parameter";
     }
-
+    if($req->{micro} and defined $req->{level} and $req->{level} eq "H"){
+        return "micro and level H are not compatible";
+    }
+    if($req->{micro} and !defined $req->{level}){
+        $req->{level} = "L";
+    }
     return;
 }
 
