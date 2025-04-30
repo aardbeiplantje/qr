@@ -43,14 +43,14 @@ sub generate {
     if($@){
         chomp(my $err = $@);
         logger::error("error: $err");
-        return do_err($r, "internal error", 500, $err);
+        return do_err($r, "internal error", 500, $err, "ERR007");
     }
     if($resp == OK){
         logger::info("request handled successfully");
         return OK;
     }
     logger::error("request failed: $resp");
-    return do_err($r, "internal error", 500, "request failed");
+    return do_err($r, "internal error", 500, "request failed", "ERR008");
 }
 
 sub handle_qr {
@@ -59,7 +59,7 @@ sub handle_qr {
     logger::info("handling $method");
 
     # fast/simple check
-    return do_err($r, "invalid request method", 405)
+    return do_err($r, "invalid request method", 405, undef, "ERR001")
         if $r->request_method !~ m/^(POST|GET)$/i;
 
     # body? assume POST/json
@@ -67,14 +67,14 @@ sub handle_qr {
         if $r->has_request_body(\&handle_qr_post);
 
     # check query args
-    if($method =~ m/^(GET)$/i and length($r->args//"")){
-        logger::info("handling GET, args: ".$r->args);
+    if ($method =~ m/^(GET)$/i and length($r->args // "")) {
+        logger::info("handling GET, args: " . $r->args);
         my $req = _post_fields($r->args)
-            // return do_err($r, "invalid input", 400, "invalid query args");
+            // return do_err($r, "invalid input", 400, "invalid query args", "ERR002");
         return do_qr($r, $req);
     }
 
-    return do_err($r, "invalid request", 400, "invalid request");
+    return do_err($r, "invalid request", 400, "invalid request", "ERR005");
 }
 
 sub _post_fields {
@@ -96,20 +96,20 @@ sub handle_qr_post {
     my $req;
     eval {
         my $ct = $r->header_in("Content-Type");
-        if($ct =~ m/^application\/json$/i){
+        if ($ct =~ m/^application\/json$/i) {
             require JSON;
             $req = JSON::decode_json($r->request_body);
-        } elsif($ct =~ m/^application\/x-www-form-urlencoded$/i) {
+        } elsif ($ct =~ m/^application\/x-www-form-urlencoded$/i) {
             $req = _post_fields($r->request_body)
                 // die "invalid form data\n";
         } else {
-            die "wrong Content-Type: $ct\n"
+            die "wrong Content-Type: $ct\n";
         }
         $r->discard_request_body;
     };
-    if($@){
+    if ($@) {
         chomp(my $err = $@);
-        return do_err($r, "invalid input", 400, $err);
+        return do_err($r, "invalid input", 400, $err, "ERR006");
     }
 
     # do QR code generation
@@ -117,11 +117,11 @@ sub handle_qr_post {
 }
 
 sub do_err {
-    my ($r, $hdr_err, $status, $err) = @_;
-    logger::error($err//$hdr_err//"error");
+    my ($r, $hdr_err, $status, $err, $error_code) = @_;
+    logger::error($err // $hdr_err // "error");
     $r->discard_request_body;
     $r->header_only;
-    $r->header_out("X-Error", $hdr_err);
+    $r->header_out("X-Error", "$hdr_err (Error Code: $error_code)");
     $r->status($status);
     $r->send_http_header;
     return OK;
@@ -133,14 +133,14 @@ sub do_qr {
     # validate
     logger::info("validating parameters");
     my $err = check_parameters($req);
-    if($err){
-        return do_err(400, "invalid input", "invalid parameters: $err");
+    if ($err) {
+        return do_err($r, "invalid input", 400, "invalid parameters: $err", "ERR004");
     }
 
     # all is well, generate the QR code
     my $img_data = generate_qr($req);
-    if(!length($img_data//"")){
-        return do_err(500, "failed to generate QR code");
+    if (!length($img_data // "")) {
+        return do_err($r, "failed to generate QR code", 500, undef, "ERR003");
     }
     $r->discard_request_body;
     $r->header_out("Content-Type", "image/png");
