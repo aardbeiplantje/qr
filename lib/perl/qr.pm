@@ -29,6 +29,8 @@ use nginx;
 use Encode;
 use URI;
 use URI::QueryParam;
+use File::Temp ();
+use File::Path ();
 
 sub generate {
     my ($r) = @_;
@@ -218,9 +220,16 @@ sub generate_qr {
     my $t = time();
     ($::ITERATIONS//=0)++;
     $::ITERATIONS %= 1000;
-    my $suffix = "$$.$t.$::ITERATIONS.png";
+    my $base_t = "$$.$t.$::ITERATIONS";
+    my $suffix = "$base_t.png";
+    my $tmp_shm_dir = File::Temp::tempdir(
+        "$shm_dir/qrencode-$base_t-XXXXXX",
+        DIR => $shm_dir,
+    );
 
-    my $tmp_fn_shm = "$shm_dir/qrencode-$suffix";
+    my $img_data;
+    eval {
+    my $tmp_fn_shm = "$tmp_shm_dir/qrencode-$suffix";
     logger::info("generating QR code $tmp_fn_shm");
     $qr->{level}       //= "H";
     $qr->{size}        //= 10;
@@ -284,14 +293,14 @@ sub generate_qr {
             my $border_size = $qr->{size};
 
             # Resize the logo
-            my $resized_logo_fn = "$shm_dir/l_r.$suffix";
+            my $resized_logo_fn = "$tmp_shm_dir/l_r.$suffix";
             system("magick", $logo_fn,
                    "-resize", "${logo_size}x${logo_size}",
                    $resized_logo_fn) == 0
                 or die "Could not resize logo: $!";
 
             # Add a white border around the resized logo
-            my $bordered_logo_fn = "$shm_dir/l_b.$suffix";
+            my $bordered_logo_fn = "$tmp_shm_dir/l_b.$suffix";
             system("magick", $resized_logo_fn,
                    "-bordercolor", "white",
                    "-border", "${border_size}x${border_size}",
@@ -316,10 +325,26 @@ sub generate_qr {
     logger::info("reading QR code $tmp_fn_shm");
     open($fh, "<", $tmp_fn_shm)
         or die "Could not open $tmp_fn_shm: $!";
-    my $img_data = do {local $/; <$fh>};
+    $img_data = do {local $/; <$fh>};
     close($fh);
     unlink($tmp_fn_shm)
         or logger::error("Could not delete $tmp_fn_shm: $!");
+
+    # cleanup
+    File::Path::rmtree($tmp_shm_dir);
+    };
+    if($@){
+        chomp(my $err = $@);
+        eval {
+            File::Path::rmtree($tmp_shm_dir);
+        };
+        if($@){
+            chomp(my $err2 = $@);
+            logger::error("error deleting tmp dir: $err2");
+        }
+        logger::error("error generating QR code: $err");
+        return;
+    }
     return $img_data;
 }
 
