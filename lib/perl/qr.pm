@@ -1,5 +1,15 @@
 package qr;
 
+BEGIN {
+    $0 = "qrencode";
+    %ENV = (
+        # disable any locale settings
+        LC_ALL => "C",
+        LANG   => "C",
+        LANGUAGE => "C",
+    );
+}
+
 use strict; use warnings;
 
 # This class is used from as an nginx perl module, to generate QR codes. This
