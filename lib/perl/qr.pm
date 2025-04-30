@@ -43,7 +43,7 @@ sub generate {
     if($@){
         chomp(my $err = $@);
         logger::error("error: $err");
-        return HTTP_BAD_REQUEST;
+        return do_err($r, "internal error", 500, $err);
     }
     return $resp;
 }
@@ -54,7 +54,7 @@ sub handle_qr {
     logger::info("handling $method");
 
     # fast/simple check
-    return HTTP_BAD_REQUEST
+    return do_err($r, "invalid request method", 405)
         if $r->request_method !~ m/^(POST|GET)$/i;
 
     # body? assume POST/json
@@ -65,11 +65,11 @@ sub handle_qr {
     if($method =~ m/^(GET)$/i and length($r->args//"")){
         logger::info("handling GET, args: ".$r->args);
         my $req = _post_fields($r->args)
-            // return HTTP_BAD_REQUEST;
+            // return do_err($r, "invalid input", 400, "invalid query args");
         return do_qr($r, $req);
     }
 
-    return HTTP_BAD_REQUEST;
+    return do_err($r, "invalid request", 400, "invalid request");
 }
 
 sub _post_fields {
@@ -104,18 +104,22 @@ sub handle_qr_post {
     };
     if($@){
         chomp(my $err = $@);
-        logger::error("error: $err");
-        $r->header_only;
-        $r->header_out("Content-Length", 0);
-        $r->header_out("Connection", "close");
-        $r->header_out("X-Error", "Invalid input");
-        $r->status(400);
-        $r->send_http_header;
-        return OK;
+        return do_err($r, "invalid input", 400, $err);
     }
 
     # do QR code generation
     return do_qr($r, $req);
+}
+
+sub do_err {
+    my ($r, $hdr_err, $status, $err) = @_;
+    logger::error($err//$hdr_err//"error");
+    $r->discard_request_body;
+    $r->header_only;
+    $r->header_out("X-Error", $hdr_err);
+    $r->status($status);
+    $r->send_http_header;
+    return OK;
 }
 
 sub do_qr {
@@ -125,27 +129,13 @@ sub do_qr {
     logger::info("validating parameters");
     my $err = check_parameters($req);
     if($err){
-        logger::error("invalid parameters: $err");
-        $r->header_only;
-        $r->header_out("Content-Length", 0);
-        $r->header_out("Connection", "close");
-        $r->header_out("X-Error", "Invalid input");
-        $r->status(400);
-        $r->send_http_header;
-        return OK;
+        return do_err(400, "invalid input", "invalid parameters: $err");
     }
 
     # all is well, generate the QR code
     my $img_data = generate_qr($req);
     if(!length($img_data//"")){
-        logger::error("failed to generate QR code");
-        $r->header_only;
-        $r->header_out("Content-Length", 0);
-        $r->header_out("Connection", "close");
-        $r->header_out("X-Error", "Failed");
-        $r->status(500);
-        $r->send_http_header;
-        return OK;
+        return do_err(500, "failed to generate QR code");
     }
     $r->discard_request_body;
     $r->header_out("Content-Type", "image/png");
