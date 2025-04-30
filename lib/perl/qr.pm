@@ -7,12 +7,7 @@ use Errno;
 my ($n_uid, $n_gid, $shm_dir);
 BEGIN {
     $0 = "qrencode";
-    %ENV = (
-        # disable any locale settings
-        LC_ALL => "C",
-        LANG   => "C",
-        LANGUAGE => "C",
-    );
+    %ENV = ();
     umask(0077);
     ($n_uid, $n_gid) = ($>, $));
     $shm_dir = "/dev/shm/qrencode";
