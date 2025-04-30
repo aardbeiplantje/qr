@@ -17,7 +17,7 @@ BEGIN {
     ($n_uid, $n_gid) = ($>, $));
     $shm_dir = "/dev/shm/qrencode";
     mkdir($shm_dir)
-        or (!$!{ENOENT} and die "Could not create $shm_dir: $!");
+        or (!$!{ENOENT} and die "Could not create $shm_dir: $!\n");
 }
 
 # This class is used from as an nginx perl module, to generate QR codes. This
@@ -96,7 +96,7 @@ sub handle_qr_post {
             $req = JSON::decode_json($r->request_body);
         } elsif($ct =~ m/^application\/x-www-form-urlencoded$/i) {
             $req = _post_fields($r->request_body)
-                // die "invalid form data";
+                // die "invalid form data\n";
         } else {
             die "wrong Content-Type: $ct\n"
         }
@@ -104,7 +104,7 @@ sub handle_qr_post {
     };
     if($@){
         chomp(my $err = $@);
-        logger::error("error decoding json: $err");
+        logger::error("error: $err");
         $r->header_only;
         $r->header_out("Content-Length", 0);
         $r->header_out("Connection", "close");
@@ -147,6 +147,7 @@ sub do_qr {
         $r->send_http_header;
         return OK;
     }
+    $r->discard_request_body;
     $r->header_out("Content-Type", "image/png");
     $r->header_out("Content-Length", length($img_data));
     $r->status(200);
@@ -207,7 +208,7 @@ sub check_parameters {
     }
     if(length($req->{eightbit}//"")
         and $req->{eightbit} !~ /^(0|1)$/){
-        die "invalid 8bit parameter";
+        return "invalid 8bit parameter";
     }
     if(length($req->{symversion}//"")
         and $req->{symversion} !~ /^\d+$/
@@ -294,7 +295,8 @@ sub generate_qr {
         $qr->{symversion} ? ("-v", $qr->{symversion}):(),
     );
     logger::info("qrencode command: ".join(" ", @qr_cmd));
-    open(my $fh, "|-", @qr_cmd) or die "Could not open qrencode: $!";
+    open(my $fh, "|-", @qr_cmd)
+        or die "Could not open qrencode: $!\n";
     binmode($fh);
     Encode::_utf8_off($qr->{text});
     print {$fh} $qr->{text};
@@ -334,7 +336,7 @@ sub generate_qr {
             system("magick", $logo_fn,
                    "-resize", "${logo_size}x${logo_size}",
                    $resized_logo_fn) == 0
-                or die "Could not resize logo: $!";
+                or die "Could not resize logo: $!\n";
 
             # Add a white border around the resized logo
             my $bordered_logo_fn = "$tmp_shm_dir/l_b.$suffix";
@@ -342,7 +344,7 @@ sub generate_qr {
                    "-bordercolor", "white",
                    "-border", "${border_size}x${border_size}",
                    $bordered_logo_fn) == 0
-                or die "Could not add border to logo: $!";
+                or die "Could not add border to logo: $!\n";
             unlink($resized_logo_fn)
                 or logger::error("Could not delete resized logo: $!");
 
@@ -351,7 +353,7 @@ sub generate_qr {
                    "-compose", "over",
                    "-gravity", "center",
                    "-composite", $tmp_fn_shm) == 0
-                or die "Could not overlay logo: $!";
+                or die "Could not overlay logo: $!\n";
             unlink($bordered_logo_fn)
                 or logger::error("Could not delete bordered logo: $!");
         } else {
@@ -361,7 +363,7 @@ sub generate_qr {
 
     logger::info("reading QR code $tmp_fn_shm");
     open($fh, "<", $tmp_fn_shm)
-        or die "Could not open $tmp_fn_shm: $!";
+        or die "Could not open $tmp_fn_shm: $!\n";
     $img_data = do {local $/; <$fh>};
     close($fh);
     unlink($tmp_fn_shm)
