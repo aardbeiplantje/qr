@@ -1,5 +1,10 @@
 package qr;
 
+use strict; use warnings;
+
+use Errno;
+
+my ($n_uid, $n_gid, $shm_dir);
 BEGIN {
     $0 = "qrencode";
     %ENV = (
@@ -8,9 +13,12 @@ BEGIN {
         LANG   => "C",
         LANGUAGE => "C",
     );
+    umask(0077);
+    ($n_uid, $n_gid) = ($>, $));
+    $shm_dir = "/dev/shm/qrencode";
+    mkdir($shm_dir)
+        or (!$!{ENOENT} and die "Could not create $shm_dir: $!");
 }
-
-use strict; use warnings;
 
 # This class is used from as an nginx perl module, to generate QR codes. This
 # is via a POST or GET where the body is a JSON object representing the text to
@@ -212,7 +220,7 @@ sub generate_qr {
     $::ITERATIONS %= 1000;
     my $suffix = "$$.$t.$::ITERATIONS.png";
 
-    my $tmp_fn_shm = "/dev/shm/qrencode-$suffix";
+    my $tmp_fn_shm = "$shm_dir/qrencode-$suffix";
     logger::info("generating QR code $tmp_fn_shm");
     $qr->{level}       //= "H";
     $qr->{size}        //= 10;
@@ -276,14 +284,14 @@ sub generate_qr {
             my $border_size = $qr->{size};
 
             # Resize the logo
-            my $resized_logo_fn = "/dev/shm/l_r.$suffix";
+            my $resized_logo_fn = "$shm_dir/l_r.$suffix";
             system("magick", $logo_fn,
                    "-resize", "${logo_size}x${logo_size}",
                    $resized_logo_fn) == 0
                 or die "Could not resize logo: $!";
 
             # Add a white border around the resized logo
-            my $bordered_logo_fn = "/dev/shm/l_b.$suffix";
+            my $bordered_logo_fn = "$shm_dir/l_b.$suffix";
             system("magick", $resized_logo_fn,
                    "-bordercolor", "white",
                    "-border", "${border_size}x${border_size}",
