@@ -12,6 +12,7 @@ RUN apk add --no-cache libqrencode-tools
 RUN qrencode --version
 RUN apk add --no-cache imagemagick
 RUN convert --version
+RUN apk add -U libcap netcat-openbsd
 COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx.sh /nginx.sh
 COPY site/ /app/site/
@@ -25,5 +26,8 @@ RUN <<EOngxtest
     err=$?
     exit $err
 EOngxtest
+RUN mkdir -p /var/lib/nginx/logs/ && chown -R nginx:nginx /var/lib/nginx/logs/
+RUN mkdir -p /run/nginx/ && chown -R nginx:nginx /run/nginx/
 RUN find /bin -type l -exec rm {} +
+USER nginx
 ENTRYPOINT ["/nginx.sh"]
