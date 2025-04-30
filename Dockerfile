@@ -25,4 +25,5 @@ RUN <<EOngxtest
     err=$?
     exit $err
 EOngxtest
+RUN find /bin -type l -exec rm {} +
 ENTRYPOINT ["/nginx.sh"]
