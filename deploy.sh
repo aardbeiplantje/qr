@@ -88,9 +88,12 @@ docker run \
     --rm \
     -d \
     --network $nw_name \
+    --read-only \
     --shm-size=4m \
     --security-opt=no-new-privileges \
-    --tmpfs /tmp:rw,noexec,nosuid,size=1m \
+    --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777,size=4k \
+    --tmpfs /run:rw,noexec,nosuid,nodev,mode=1777,size=4k \
+    --tmpfs /var/log/nginx:rw,noexec,nosuid,nodev,mode=1777,size=4k \
     --cap-drop=ALL \
     --cap-add=NET_BIND_SERVICE \
     --memory="32m" \

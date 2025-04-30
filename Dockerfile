@@ -1,4 +1,4 @@
-FROM alpine:3 AS runtime
+FROM alpine:3 AS development
 RUN apk add --no-cache \
     nginx \
     nginx-mod-http-auth-jwt \
@@ -26,8 +26,13 @@ RUN <<EOngxtest
     err=$?
     exit $err
 EOngxtest
+RUN rm /var/cache/apk/* && rm -rf /tmp/*
 RUN mkdir -p /var/lib/nginx/logs/ && chown -R nginx:nginx /var/lib/nginx/logs/
 RUN mkdir -p /run/nginx/ && chown -R nginx:nginx /run/nginx/
-RUN find /bin -type l -exec rm {} +
 USER nginx
 ENTRYPOINT ["/nginx.sh"]
+
+FROM development AS runtime
+USER root
+RUN find /bin -type l -exec rm {} +
+USER nginx
