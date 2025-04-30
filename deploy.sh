@@ -93,7 +93,7 @@ docker run \
     --tmpfs /tmp:rw,noexec,nosuid,size=1m \
     --cap-drop=ALL \
     --cap-add=NET_BIND_SERVICE \
-    --memory="16m" \
+    --memory="32m" \
     --cpus="0.5" \
     --name $APP_NAME \
     -p 443:443 \
