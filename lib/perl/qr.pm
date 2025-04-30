@@ -148,89 +148,123 @@ sub do_qr {
 
 sub check_parameters {
     my ($req) = @_;
-    if(!length($req->{text}//"")){
+
+    # Check if text is provided
+    if (!length($req->{text} // "")) {
         return "invalid text parameter";
     }
-    if(length($req->{size}//"")
+
+    # Check maximum text size (2953 characters for alphanumeric mode, version 40, level L)
+    if (length($req->{text}) > 2953) {
+        return "text exceeds maximum allowed size for a QR code";
+    }
+
+    # Validate size
+    if (length($req->{size} // "")
         and $req->{size} !~ /^\d+$/
-        and ($req->{size} < 1 or $req->{size} > 5000)){
+        and ($req->{size} < 1 or $req->{size} > 5000)) {
         return "invalid size parameter";
     }
-    if(length($req->{level}//"")
-        and $req->{level} !~ /^[LMQH]$/i){
+
+    # Validate level
+    if (length($req->{level} // "")
+        and $req->{level} !~ /^[LMQH]$/i) {
         return "invalid level parameter";
     }
-    if(length($req->{margin}//"")
+
+    # Validate margin
+    if (length($req->{margin} // "")
         and $req->{margin} !~ /^\d+$/
-        and ($req->{margin} < 0 or $req->{margin} > 200)){
+        and ($req->{margin} < 0 or $req->{margin} > 200)) {
         return "invalid margin parameter";
     }
-    if(length($req->{color}//"")
-        and $req->{color} !~ /^[0-9A-F]{6}$/i){
+
+    # Validate color
+    if (length($req->{color} // "")
+        and $req->{color} !~ /^[0-9A-F]{6}$/i) {
         return "invalid color parameter";
     }
-    if(length($req->{bgcolor}//"")
-        and $req->{bgcolor} !~ /^[0-9A-F]{6}$/i){
+
+    # Validate background color
+    if (length($req->{bgcolor} // "")
+        and $req->{bgcolor} !~ /^[0-9A-F]{6}$/i) {
         return "invalid bgcolor parameter";
     }
-    if(length($req->{type}//"")
+
+    # Validate type
+    if (length($req->{type} // "")
         and $req->{type} !~ /^(PNG|PNG32|EPS|SVG|XPM|ANSI
             |ANSI256|ASCII|ASCIIi|UTF8|UTF8i|ANSIUTF8
-            |ANSIUTF8i|ANSI256UTF8)$/ix){
+            |ANSIUTF8i|ANSI256UTF8)$/ix) {
         return "invalid type parameter";
     }
-    if(length($req->{ignorecase}//"")
-        and $req->{ignorecase} !~ /^(0|1)$/){
+
+    # Validate ignorecase
+    if (length($req->{ignorecase} // "")
+        and $req->{ignorecase} !~ /^(0|1)$/) {
         return "invalid ignorecase parameter";
     }
-    if(length($req->{dpi}//"")
+
+    # Validate DPI
+    if (length($req->{dpi} // "")
         and $req->{dpi} !~ /^\d+$/
-        and ($req->{dpi} < 1 or $req->{dpi} > 1200)){
+        and ($req->{dpi} < 1 or $req->{dpi} > 1200)) {
         return "invalid dpi parameter";
     }
-    if(length($req->{micro}//"")
-        and $req->{micro} !~ /^(0|1)$/){
+
+    # Validate micro
+    if (length($req->{micro} // "")
+        and $req->{micro} !~ /^(0|1)$/) {
         return "invalid micro parameter";
     }
-    if(length($req->{kanji}//"")
-        and $req->{kanji} !~ /^(0|1)$/){
+
+    # Validate kanji
+    if (length($req->{kanji} // "")
+        and $req->{kanji} !~ /^(0|1)$/) {
         return "invalid kanji parameter";
     }
-    if(length($req->{eightbit}//"")
-        and $req->{eightbit} !~ /^(0|1)$/){
+
+    # Validate eightbit
+    if (length($req->{eightbit} // "")
+        and $req->{eightbit} !~ /^(0|1)$/) {
         return "invalid 8bit parameter";
     }
-    if(length($req->{symversion}//"")
+
+    # Validate symversion
+    if (length($req->{symversion} // "")
         and $req->{symversion} !~ /^\d+$/
-        and ($req->{symversion} < 1 or $req->{symversion} > 40)){
+        and ($req->{symversion} < 1 or $req->{symversion} > 40)) {
         return "invalid symversion parameter";
     }
-    if($req->{micro}){
-        if(defined $req->{level} and $req->{level} eq "H"){
+
+    # Additional checks for micro QR codes
+    if ($req->{micro}) {
+        if (defined $req->{level} and $req->{level} eq "H") {
             return "micro and level H are not compatible";
         }
-        if(!defined $req->{level}){
+        if (!defined $req->{level}) {
             $req->{level} = "L";
         }
-        if(defined $req->{size} and $req->{size} > 10){
+        if (defined $req->{size} and $req->{size} > 10) {
             return "micro and size > 10 are not compatible";
         }
-        if(!defined $req->{size}){
+        if (!defined $req->{size}) {
             $req->{size} = 1;
         }
-        if(defined $req->{margin} and $req->{margin} > 10){
+        if (defined $req->{margin} and $req->{margin} > 10) {
             return "micro and margin > 10 are not compatible";
         }
-        if(!defined $req->{margin}){
+        if (!defined $req->{margin}) {
             $req->{margin} = 0;
         }
-        if(defined $req->{symversion} and $req->{symversion} > 4){
+        if (defined $req->{symversion} and $req->{symversion} > 4) {
             return "micro and symversion > 4 are not compatible";
         }
-        if(!defined $req->{symversion}){
+        if (!defined $req->{symversion}) {
             $req->{symversion} = 1;
         }
     }
+
     return;
 }
 
