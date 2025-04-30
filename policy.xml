@@ -2,5 +2,5 @@
     <policy domain="delegate" rights="none" pattern="*"/>
     <policy domain="filter" rights="none" pattern="*"/>
     <policy domain="coder" rights="none" pattern="*"/>
-    <policy domain="coder" rights="read|write" pattern="{PNG,WEBP}"/>
+    <policy domain="coder" rights="read|write" pattern="{PNG,PNG32}"/>
 </policymap>
