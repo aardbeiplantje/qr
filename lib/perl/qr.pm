@@ -45,7 +45,12 @@ sub generate {
         logger::error("error: $err");
         return do_err($r, "internal error", 500, $err);
     }
-    return $resp;
+    if($resp == OK){
+        logger::info("request handled successfully");
+        return OK;
+    }
+    logger::error("request failed: $resp");
+    return do_err($r, "internal error", 500, "request failed");
 }
 
 sub handle_qr {
