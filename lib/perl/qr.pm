@@ -26,6 +26,7 @@ use URI;
 use URI::QueryParam;
 use File::Temp ();
 use File::Path ();
+use Digest::SHA;
 
 my @allowed_fields = qw(
     text size level margin color bgcolor type dpi micro kanji eightbit
@@ -187,6 +188,7 @@ sub do_qr {
         return do_err($r, "invalid type", 400, "invalid type: $req->{type}", "ERR009");
     }
     $r->header_out("Content-Length", length($img_data));
+    $r->header_out("Content-Digest", "sha-256=:".Digest::SHA::sha256_base64($img_data).":");
     $r->status(200);
     $r->send_http_header;
     $r->print($img_data);
