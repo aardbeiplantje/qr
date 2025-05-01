@@ -14,11 +14,7 @@ if [   ! -z "$DOCKER_REGISTRY" \
     unset DOCKER_REGISTRY_PASS
 else
     echo "no registry login"
-    DOCKER_REGISTRY=${DOCKER_REGISTRY:-local}
-    DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
 fi
-DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
-DOCKER_REGISTRY
 
 QRENCODE_CERT_VOLUME=${QRENCODE_CERT_VOLUME:-qrencode-https-cert}
 
