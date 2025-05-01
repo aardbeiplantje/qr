@@ -1,23 +1,24 @@
 #!/bin/bash 
-export WORKSPACE=${WORKSPACE:-${BASH_SOURCE%/*}}
-export APP_NAME=${APP_NAME:-qrencode}
-export QRENCODE_DOMAIN=${QRENCODE_DOMAIN?Need to set QRENCODE_DOMAIN}
+WORKSPACE=${WORKSPACE:-${BASH_SOURCE%/*}}
+APP_NAME=${APP_NAME:-qrencode}
+QRENCODE_DOMAIN=${QRENCODE_DOMAIN?Need to set QRENCODE_DOMAIN}
 
 echo "checking for registry auth"
 if [   ! -z "$DOCKER_REGISTRY" \
     -a ! -z "$DOCKER_REGISTRY_USER" \
     -a ! -z "$DOCKER_REGISTRY_PASS" ]; then
     echo "login on the registry"
-    export DOCKER_REGISTRY_PASS DOCKER_REGISTRY_USER DOCKER_REGISTRY
+    export DOCKER_REGISTRY_PASS
     printenv DOCKER_REGISTRY_PASS \
         |docker login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
+    unset DOCKER_REGISTRY_PASS
 else
     echo "no registry login"
-    export DOCKER_REGISTRY=${DOCKER_REGISTRY:-local}
-    export DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
+    DOCKER_REGISTRY=${DOCKER_REGISTRY:-local}
+    DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
 fi
-export DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
-export DOCKER_REGISTRY
+DOCKER_REPOSITORY=${DOCKER_REPOSITORY:-qrencode}
+DOCKER_REGISTRY
 
 QRENCODE_CERT_VOLUME=${QRENCODE_CERT_VOLUME:-qrencode-https-cert}
 
@@ -60,6 +61,8 @@ fi
 
 if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     echo "check the certtificate"
+    # work via export ENV, as this is a possible secret, and we dont want to
+    # show this in a ps or log
     export CERTBOT_MAIL=${CERTBOT_MAIL?Need to set CERTBOT_MAIL}
     docker run \
         -p 80:80 \
