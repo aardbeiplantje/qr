@@ -124,6 +124,7 @@ sub do_err {
 
 sub do_qr {
     my ($r, $req) = @_;
+    logger::info("handling QR code generation");
 
     # match Accept to the type, note that we default have PNG as the type and
     # we only set it if this was not yet set. If set, we throw an error
@@ -131,7 +132,15 @@ sub do_qr {
     if ($accept_header){
         my $found = 0;
         foreach my $type (split(/,/, $accept_header =~ s/;.*//gr =~ s/\s//gr)){
-            $type =~ s/^(?:.*\/)?//;
+            $type =~ s/^(.*)\///;
+            my $m_type = $1;
+            next if !length($m_type//"")
+                or ($m_type and $m_type ne "image" and $m_type ne "*");
+            if($type eq '*'){
+                $req->{type} = "PNG";
+                $found = 1;
+                last;
+            }
             if(!length($req->{type}//"")){
                 $req->{type} = $type;
                 $found = 1;
@@ -146,6 +155,10 @@ sub do_qr {
             return do_err($r, "invalid Accept header", 406, "invalid Accept header: $accept_header", "ERR010");
         }
     }
+    $req->{type} //= "PNG";
+    if($req->{type} !~ m/^(PNG|PNG32|EPS|SVG|XPM|ANSI|ANSI256|ASCII|ASCIIi|UTF8|UTF8i|ANSIUTF8|ANSIUTF8i|ANSI256UTF8)$/i){
+        return do_err($r, "invalid type", 406, "invalid type: $req->{type}", "ERR009");
+    }
 
     # validate
     logger::info("validating parameters");
@@ -159,6 +172,8 @@ sub do_qr {
     if (!length($img_data // "")) {
         return do_err($r, "failed to generate QR code", 500, undef, "ERR003");
     }
+
+    # prepare response
     $r->discard_request_body;
     if($req->{type} =~ m/^(PNG|PNG32)$/i){
         $r->header_out("Content-Type", "image/".lc($req->{type}));
@@ -228,7 +243,7 @@ sub check_parameters {
         and $req->{type} !~ /^(PNG|PNG32|EPS|SVG|XPM|ANSI
             |ANSI256|ASCII|ASCIIi|UTF8|UTF8i|ANSIUTF8
             |ANSIUTF8i|ANSI256UTF8)$/ix) {
-        return "invalid type parameter";
+        return "invalid type parameter: $req->{type}";
     }
 
     # Validate ignorecase
