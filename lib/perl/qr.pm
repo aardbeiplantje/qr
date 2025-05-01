@@ -125,6 +125,28 @@ sub do_err {
 sub do_qr {
     my ($r, $req) = @_;
 
+    # match Accept to the type, note that we default have PNG as the type and
+    # we only set it if this was not yet set. If set, we throw an error
+    my $accept_header = $r->header_in("Accept");
+    if ($accept_header){
+        my $found = 0;
+        foreach my $type (split(/,/, $accept_header =~ s/;.*//gr =~ s/\s//gr)){
+            $type =~ s/^(?:.*\/)?//;
+            if(!length($req->{type}//"")){
+                $req->{type} = $type;
+                $found = 1;
+                last;
+            }
+            if($req->{type} =~ m/^$type$/i){
+                $found = 1;
+                last;
+            }
+        }
+        if(!$found){
+            return do_err($r, "invalid Accept header", 406, "invalid Accept header: $accept_header", "ERR010");
+        }
+    }
+
     # validate
     logger::info("validating parameters");
     my $err = check_parameters($req);
@@ -138,7 +160,17 @@ sub do_qr {
         return do_err($r, "failed to generate QR code", 500, undef, "ERR003");
     }
     $r->discard_request_body;
-    $r->header_out("Content-Type", "image/png");
+    if($req->{type} =~ m/^(PNG|PNG32)$/i){
+        $r->header_out("Content-Type", "image/".lc($req->{type}));
+    } elsif($req->{type} =~ m/^(EPS|SVG|XPM)$/i){
+        $r->header_out("Content-Type", "image/".lc($req->{type}));
+    } elsif($req->{type} =~ m/^(ANSI|ANSI256|ASCII|ASCIIi)$/i){
+        $r->header_out("Content-Type", "text/plain; charset=us-ascii");
+    } elsif($req->{type} =~ m/^(UTF8|UTF8i|ANSIUTF8|ANSIUTF8i|ANSI256UTF8)$/i){
+        $r->header_out("Content-Type", "text/plain; charset=utf-8");
+    } else {
+        return do_err($r, "invalid type", 400, "invalid type: $req->{type}", "ERR009");
+    }
     $r->header_out("Content-Length", length($img_data));
     $r->status(200);
     $r->send_http_header;
