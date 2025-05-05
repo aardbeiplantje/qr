@@ -43,6 +43,7 @@ target "qrencode" {
   dockerfile = "Dockerfile"
   networks = ["host"]
   platforms = [
+    "linux/arm/v6",
     "linux/amd64"
   ]
 }
@@ -62,7 +63,12 @@ target "qrencode-development" {
   context = "."
   dockerfile = "Dockerfile"
   networks = ["host"]
+  attest = [
+    "type=provenance,mode=max",
+    "type=sbom",
+  ]
   platforms = [
+    "linux/arm/v6",
     "linux/amd64"
   ]
 }
