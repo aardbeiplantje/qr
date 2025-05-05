@@ -50,6 +50,8 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     echo "running sysctl for proxy_ndp and add $IPV6 as neighbour"
     sudo ip -6 neigh add proxy $IPV6 dev eno1
     sudo sysctl net.ipv6.conf.eno1.proxy_ndp=1
+    sudo sysctl net.ipv6.conf.default.proxy_ndp=1
+    sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 else
     echo "no network"
     IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
