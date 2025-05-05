@@ -23,8 +23,9 @@ docker stop $APP_NAME 2>/dev/null 1>&2
 
 nw_name=dmz-ipv6-$APP_NAME
 if [ "${DO_NETWORK:-0}" -eq 1 ]; then
-    echo "checking for docker network"
-    IPV6_PREFIX_DEFAULT=$(ip -6 r l dev eno1 proto kernel metric 100|awk -F/ '{print $1}')
+    IF_NAME=${IF_NAME:-eno1}
+    echo "checking for docker network, using $IF_NAME"
+    IPV6_PREFIX_DEFAULT=$(ip -6 r l dev $IF_NAME proto kernel metric 100|awk -F/ '{print $1}')
     IPV6_PREFIX_DEFAULT=${IPV6_PREFIX_DEFAULT%::*}:c::/112
     IPV6_PREFIX=${IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
     docker network rm $nw_name
@@ -47,21 +48,20 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
         --ipam-driver default
     IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
     if [ $? ]; then
-	echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
-	exit 1
+        echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
+        exit 1
     fi
 
     echo "running sysctl for proxy_ndp and add $IPV6 as neighbour"
-    sudo ip -6 neigh add proxy $IPV6 dev eno1
-    sudo sysctl net.ipv6.conf.eno1.proxy_ndp=1
+    sudo ip -6 neigh add proxy $IPV6 dev $IF_NAME
     sudo sysctl net.ipv6.conf.default.proxy_ndp=1
     sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 else
     echo "no network"
     IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
     if [ $? ]; then
-	echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
-	exit 1
+        echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
+        exit 1
     fi
 fi
 
