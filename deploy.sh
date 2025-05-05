@@ -46,7 +46,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
         -o com.docker.network.bridge.inhibit_ipv4=true \
         -o com.docker.network.driver.mtu=1500 \
         --ipam-driver default
-    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
+    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short +retry=0 +tries=1)
     if [ $? ]; then
         echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
         exit 1
@@ -58,7 +58,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 else
     echo "no network"
-    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
+    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short +retry=0 +tries=1)
     if [ $? ]; then
         echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
         exit 1
