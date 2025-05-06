@@ -1,7 +1,11 @@
 #!/bin/bash 
 WORKSPACE=${WORKSPACE:-${BASH_SOURCE%/*}}
-APP_NAME=${APP_NAME:-qrencode}
-QRENCODE_DOMAIN=${QRENCODE_DOMAIN?Need to set QRENCODE_DOMAIN}
+APP_NAME=${APP_NAME?Need APP_NAME}
+APP_IMAGE=${APP_IMAGE?Need APP_IMAGE}
+DOMAIN=${APP_DOMAIN?Need APP_DOMAIN}
+CERT_VOLUME=${APP_CERT_VOLUME?Need APP_CERT_VOLUME}
+CERTBOT_MAIL=${CERTBOT_MAIL?Need CERTBOT_MAIL}
+export CERTBOT_MAIL
 
 echo "checking for registry auth"
 if [   ! -z "$DOCKER_REGISTRY" \
@@ -15,8 +19,6 @@ if [   ! -z "$DOCKER_REGISTRY" \
 else
     echo "no registry login"
 fi
-
-QRENCODE_CERT_VOLUME=${QRENCODE_CERT_VOLUME:-qrencode-https-cert}
 
 echo "stopping $APP_NAME"
 docker stop $APP_NAME 2>/dev/null 1>&2
@@ -46,9 +48,9 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
         -o com.docker.network.bridge.inhibit_ipv4=true \
         -o com.docker.network.driver.mtu=1500 \
         --ipam-driver default
-    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short +retry=0 +tries=1)
+    IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
     if [ $? ]; then
-        echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
+        echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
 
@@ -58,9 +60,9 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 else
     echo "no network"
-    IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short +retry=0 +tries=1)
+    IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
     if [ $? ]; then
-        echo -ne "problem looking up $QRENCODE_DOMAIN:\n$IPV6\n"
+        echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
 fi
@@ -69,7 +71,6 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     echo "check the certtificate"
     # work via export ENV, as this is a possible secret, and we dont want to
     # show this in a ps or log
-    export CERTBOT_MAIL=${CERTBOT_MAIL?Need to set CERTBOT_MAIL}
     docker run \
         -p 80:80 \
         --rm \
@@ -77,12 +78,12 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
         --network $nw_name \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
-        -v ${QRENCODE_CERT_VOLUME}:/certs:rw\
+        -v ${CERT_VOLUME}:/certs:rw\
         local/certbot/certbot:latest \
             certonly \
                 --agree-tos \
                 --force-renewal \
-                --domains "$QRENCODE_DOMAIN"
+                --domains "$DOMAIN"
 else
     echo "no certbot"
 fi
@@ -111,5 +112,5 @@ docker run \
     -p 443:443 \
     --ip6 $IPV6 \
     $extra_volume \
-    -v ${QRENCODE_CERT_VOLUME}:/certs:ro \
-    local/qrencode/qrencode
+    -v ${CERT_VOLUME}:/certs:ro \
+    "${APP_IMAGE}"
