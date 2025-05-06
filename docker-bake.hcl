@@ -64,11 +64,8 @@ target "qrencode-development" {
   dockerfile = "Dockerfile"
   networks = ["host"]
   attest = [
-    "type=provenance,mode=max",
-    "type=sbom",
   ]
   platforms = [
-    "linux/arm/v6",
     "linux/amd64"
   ]
 }
