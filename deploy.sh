@@ -75,7 +75,7 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     $docker_cmd run \
         -p 80:80 \
         --rm \
-        -e CERTBOT_MAIL \
+        -e CERTBOT_MAIL="$CERTBOT_MAIL" \
         --network $nw_name \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
