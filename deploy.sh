@@ -6,6 +6,7 @@ DOMAIN=${APP_DOMAIN?Need APP_DOMAIN}
 CERT_VOLUME=${APP_CERT_VOLUME?Need APP_CERT_VOLUME}
 CERTBOT_MAIL=${CERTBOT_MAIL?Need CERTBOT_MAIL}
 export CERTBOT_MAIL
+docker_cmd=${DOCKER_CMD:-docker}
 
 echo "checking for registry auth"
 if [   ! -z "$DOCKER_REGISTRY" \
@@ -14,14 +15,14 @@ if [   ! -z "$DOCKER_REGISTRY" \
     echo "login on the registry"
     export DOCKER_REGISTRY_PASS
     printenv DOCKER_REGISTRY_PASS \
-        |docker login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
+        |$docker_cmd login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
     unset DOCKER_REGISTRY_PASS
 else
     echo "no registry login"
 fi
 
 echo "stopping $APP_NAME"
-docker stop $APP_NAME 2>/dev/null 1>&2
+$docker_cmd stop $APP_NAME 2>/dev/null 1>&2
 
 nw_name=dmz-ipv6-$APP_NAME
 if [ "${DO_NETWORK:-0}" -eq 1 ]; then
@@ -30,8 +31,8 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     IPV6_PREFIX_DEFAULT=$(ip -6 r l dev $IF_NAME proto kernel metric 100|awk -F/ '{print $1}')
     IPV6_PREFIX_DEFAULT=${IPV6_PREFIX_DEFAULT%::*}:c::/112
     IPV6_PREFIX=${IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
-    docker network rm $nw_name
-    docker network create \
+    $docker_cmd network rm $nw_name
+    $docker_cmd network create \
         --ipv6 $nw_name \
         --subnet=$IPV6_PREFIX \
         --ipv4=false \
@@ -71,7 +72,7 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     echo "check the certtificate"
     # work via export ENV, as this is a possible secret, and we dont want to
     # show this in a ps or log
-    docker run \
+    $docker_cmd run \
         -p 80:80 \
         --rm \
         -e CERTBOT_MAIL \
@@ -94,7 +95,7 @@ if [ -d ${WORKSPACE}/site ]; then
 else
     echo "stopping $APP_NAME and restarting"
 fi
-docker run \
+$docker_cmd run \
     --rm \
     -d \
     --network $nw_name \
