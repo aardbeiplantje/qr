@@ -96,9 +96,11 @@ else
     echo "stopping $APP_NAME and restarting"
 fi
 $docker_cmd run \
+    -p 443:443 \
     --rm \
     -d \
     --network $nw_name \
+    --ip6 $IPV6 \
     --read-only \
     --shm-size=4m \
     --security-opt=no-new-privileges \
@@ -110,8 +112,6 @@ $docker_cmd run \
     --memory="32m" \
     --cpus="0.5" \
     --name $APP_NAME \
-    -p 443:443 \
-    --ip6 $IPV6 \
     $extra_volume \
     -v ${CERT_VOLUME}:/certs:ro \
     "${APP_IMAGE}"
