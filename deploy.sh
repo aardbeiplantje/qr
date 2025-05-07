@@ -28,7 +28,7 @@ nw_name=dmz-ipv6-$APP_NAME
 if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     IF_NAME=${IF_NAME:-eno1}
     echo "checking for docker network, using $IF_NAME"
-    IPV6_PREFIX_DEFAULT=$(ip -6 r l dev $IF_NAME proto kernel metric 100|awk -F/ '{print $1}')
+    IPV6_PREFIX_DEFAULT=$(ip -json -6 a l dev wlan1 scope global |jq -r '.[0].addr_info[0].local')
     IPV6_PREFIX_DEFAULT=${IPV6_PREFIX_DEFAULT%::*}:c::/112
     IPV6_PREFIX=${IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
     $docker_cmd network rm $nw_name
@@ -48,9 +48,9 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
         -o com.docker.network.enable_ipv6=true \
         -o com.docker.network.bridge.inhibit_ipv4=true \
         -o com.docker.network.driver.mtu=1500 \
-        --ipam-driver default
+        --ipam-driver default || exit $?
     IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
-    if [ $? != 0 ]; then
+    if [ $? != 0 -o -z "$IPV6" ]; then
         echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
@@ -62,7 +62,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
 else
     echo "no network"
     IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
-    if [ $? != 0 ]; then
+    if [ $? != 0 -o -z "$IPV6" ]; then
         echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
@@ -79,12 +79,12 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
         --network $nw_name \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
-        -v ${CERT_VOLUME}:/certs:rw\
-        local/certbot/certbot:latest \
+        -v ${CERT_VOLUME}:/certs:rw \
+        ghcr.io/aardbeiplantje/certbot/certbot:latest \
             certonly \
                 --agree-tos \
                 --force-renewal \
-                --domains "$DOMAIN"
+                --domains "$DOMAIN" || exit $?
 else
     echo "no certbot"
 fi
