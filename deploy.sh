@@ -49,7 +49,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
         -o com.docker.network.driver.mtu=1500 \
         --ipam-driver default
     IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
-    if [ $? ]; then
+    if [ $? != 0 ]; then
         echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
@@ -61,7 +61,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
 else
     echo "no network"
     IPV6=$(dig -6 $DOMAIN -t AAAA +short +retry=0 +tries=1)
-    if [ $? ]; then
+    if [ $? != 0 ]; then
         echo -ne "problem looking up $DOMAIN:\n$IPV6\n"
         exit 1
     fi
