@@ -20,7 +20,10 @@ COPY lib/ /app/lib/
 COPY policy.xml /etc/ImageMagick-7/policy.xml
 RUN ln -s /certs/ /etc/nginx/certs
 RUN <<EOngxtest
-    export PERL5LIB=/usr/lib/perl5/vendor_perl/armv8l-linux-thread-multi-64int
+    PERL5LIB=""
+    PERL5LIB=$PERL5LIB:/usr/lib/perl5/vendor_perl/armv8l-linux-thread-multi-64int
+    PERL5LIB=$PERL5LIB:/usr/lib/perl5/vendor_perl/x86_64-linux-thread-multi
+    export PERL5LIB
     nginx -t -c /etc/nginx/nginx.conf
     err=$?
     exit $err
