@@ -99,8 +99,8 @@ fi
 $docker_cmd run \
     -p 443:443 \
     --pull=always \
-    --rm \
     -d \
+    --restart unless-stopped \
     --network $nw_name \
     --ip6 $IPV6 \
     --read-only \
