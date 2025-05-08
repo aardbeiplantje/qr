@@ -4,9 +4,8 @@ APP_NAME=${APP_NAME?Need APP_NAME}
 APP_IMAGE=${APP_IMAGE?Need APP_IMAGE}
 DOMAIN=${APP_DOMAIN?Need APP_DOMAIN}
 CERT_VOLUME=${APP_CERT_VOLUME?Need APP_CERT_VOLUME}
-CERTBOT_MAIL=${CERTBOT_MAIL?Need CERTBOT_MAIL}
-export CERTBOT_MAIL
-docker_cmd=${DOCKER_CMD:-docker}
+APP_CERTBOT_MAIL=${APP_CERTBOT_MAIL?Need APP_CERTBOT_MAIL}
+c_cmd=${APP_CMD:-docker}
 
 echo "checking for registry auth"
 if [   ! -z "$DOCKER_REGISTRY" \
@@ -15,26 +14,26 @@ if [   ! -z "$DOCKER_REGISTRY" \
     echo "login on the registry"
     export DOCKER_REGISTRY_PASS
     printenv DOCKER_REGISTRY_PASS \
-        |$docker_cmd login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
+        |$c_cmd login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
     unset DOCKER_REGISTRY_PASS
 else
     echo "no registry login"
 fi
 
 echo "stopping $APP_NAME"
-$docker_cmd stop $APP_NAME 2>/dev/null 1>&2
+$c_cmd stop $APP_NAME 2>/dev/null 1>&2
 
 nw_name=dmz-ipv6-$APP_NAME
-if [ "${DO_NETWORK:-0}" -eq 1 ]; then
-    IF_NAME=${IF_NAME:-eno1}
-    echo "checking for docker network, using $IF_NAME"
+if [ "${APP_DO_NETWORK:-0}" -eq 1 ]; then
+    APP_IF_NAME=${APP_IF_NAME:-eno1}
+    echo "checking for network, using $APP_IF_NAME"
     IPV6_PREFIX_DEFAULT=$(ip -json -6 a l dev wlan1 scope global |jq -r '.[0].addr_info[0].local')
     IPV6_PREFIX_DEFAULT=${IPV6_PREFIX_DEFAULT%::*}:c::/112
-    IPV6_PREFIX=${IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
-    $docker_cmd network rm $nw_name
-    $docker_cmd network create \
+    APP_IPV6_PREFIX=${APP_IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
+    $c_cmd network rm $nw_name
+    $c_cmd network create \
         --ipv6 $nw_name \
-        --subnet=$IPV6_PREFIX \
+        --subnet=$APP_IPV6_PREFIX \
         --ipv4=false \
         --attachable=true \
         --scope=local \
@@ -56,7 +55,7 @@ if [ "${DO_NETWORK:-0}" -eq 1 ]; then
     fi
 
     echo "running sysctl for proxy_ndp and add $IPV6 as neighbour"
-    sudo ip -6 neigh add proxy $IPV6 dev $IF_NAME
+    sudo ip -6 neigh add proxy $IPV6 dev $APP_IF_NAME
     sudo sysctl net.ipv6.conf.default.proxy_ndp=1
     sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 else
@@ -68,15 +67,15 @@ else
     fi
 fi
 
-if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
+if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
     echo "check the certtificate"
     # work via export ENV, as this is a possible secret, and we dont want to
     # show this in a ps or log
-    $docker_cmd run \
+    $c_cmd run \
         -p 80:80 \
         --pull=always \
         --rm \
-        -e CERTBOT_MAIL="$CERTBOT_MAIL" \
+        -e CERTBOT_MAIL="$APP_CERTBOT_MAIL" \
         --network $nw_name \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
@@ -96,7 +95,7 @@ if [ -d ${WORKSPACE}/site ]; then
 else
     echo "stopping $APP_NAME and restarting"
 fi
-$docker_cmd run \
+$c_cmd run \
     -p 443:443 \
     --pull=always \
     -d \
