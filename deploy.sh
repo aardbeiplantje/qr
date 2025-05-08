@@ -22,6 +22,8 @@ fi
 
 echo "stopping $APP_NAME"
 $c_cmd stop $APP_NAME 2>/dev/null 1>&2
+sleep 1
+$c_cmd rm $APP_NAME 2>/dev/null 1>&2
 
 nw_name=dmz-ipv6-$APP_NAME
 if [ "${APP_DO_NETWORK:-0}" -eq 1 ]; then
