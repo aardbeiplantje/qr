@@ -74,6 +74,7 @@ if [ "${DO_CERTBOT:-0}" -eq 1 ]; then
     # show this in a ps or log
     $docker_cmd run \
         -p 80:80 \
+        --pull=always \
         --rm \
         -e CERTBOT_MAIL="$CERTBOT_MAIL" \
         --network $nw_name \
@@ -97,6 +98,7 @@ else
 fi
 $docker_cmd run \
     -p 443:443 \
+    --pull=always \
     --rm \
     -d \
     --network $nw_name \
