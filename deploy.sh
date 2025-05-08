@@ -40,7 +40,7 @@ if [ "${APP_DO_NETWORK:-0}" -eq 1 ]; then
         --attachable=true \
         --scope=local \
         --driver=bridge \
-        -o com.docker.network.bridge.name=dlocal-dmz0 \
+        -o com.docker.network.bridge.name=$APP_NAME-dmz0 \
         -o com.docker.network.container_iface_prefix=dmz \
         -o com.docker.network.bridge.gateway_mode_ipv6=routed \
         -o com.docker.network.bridge.enable_icc=true \
