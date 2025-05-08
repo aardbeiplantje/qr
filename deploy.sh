@@ -110,6 +110,7 @@ $docker_cmd run \
     --cap-drop=ALL \
     --cap-add=NET_BIND_SERVICE \
     --memory="32m" \
+    --memory-swap=0 \
     --cpus="0.5" \
     --name $APP_NAME \
     $extra_volume \
