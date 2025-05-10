@@ -99,7 +99,7 @@ else
 fi
 
 echo "checking $WORKSPACE"
-if [ -d ${WORKSPACE}/site ]; then
+if [ "${APP_ENV:-prod}" = "dev" -a -d ${WORKSPACE}/site ]; then
     echo "stopping $APP_NAME and restarting development mode"
     extra_volume="-v ${WORKSPACE}/site:/app/site:ro"
 else
