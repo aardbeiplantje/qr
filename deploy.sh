@@ -1,5 +1,5 @@
 #!/bin/bash 
-WORKSPACE=${WORKSPACE:-${BASH_SOURCE%/*}}
+WORKSPACE=$(readlink -f ${WORKSPACE:-${BASH_SOURCE%/*}})
 APP_NAME=${APP_NAME?Need APP_NAME}
 APP_IMAGE=${APP_IMAGE?Need APP_IMAGE}
 DOMAIN=${APP_DOMAIN?Need APP_DOMAIN}
@@ -98,12 +98,14 @@ else
     echo "no certbot"
 fi
 
+echo "checking $WORKSPACE"
 if [ -d ${WORKSPACE}/site ]; then
     echo "stopping $APP_NAME and restarting development mode"
     extra_volume="-v ${WORKSPACE}/site:/app/site:ro"
 else
     echo "stopping $APP_NAME and restarting"
 fi
+echo "running $APP_NAME"
 $c_cmd run \
     -p 443:443 \
     $do_pull \
