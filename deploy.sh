@@ -89,7 +89,7 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
         -v ${CERT_VOLUME}:/certs:rw \
-        ghcr.io/aardbeiplantje/certbot/certbot:latest \
+        ghcr.io/aardbeiplantje/certbot/certbot:${APP_CERTBOT_TAG:-latest} \
             certonly \
                 --agree-tos \
                 --force-renewal \
