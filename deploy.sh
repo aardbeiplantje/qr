@@ -16,8 +16,15 @@ if [   ! -z "$DOCKER_REGISTRY" \
     printenv DOCKER_REGISTRY_PASS \
         |$c_cmd login -u $DOCKER_REGISTRY_USER $DOCKER_REGISTRY --password-stdin
     unset DOCKER_REGISTRY_PASS
+    if [ $? != 0 ]; then
+        echo "problem with registry login"
+        exit 1
+    fi
+    echo "registry login ok"
+    do_pull="--pull=always"
 else
     echo "no registry login"
+    do_pull=""
 fi
 
 echo "stopping $APP_NAME"
@@ -99,7 +106,7 @@ else
 fi
 $c_cmd run \
     -p 443:443 \
-    --pull=always \
+    $do_pull \
     -d \
     --restart unless-stopped \
     --network $nw_name \
