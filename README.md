@@ -43,7 +43,7 @@ IFACE=eno1
 QRENCODE_DOMAIN=qrencode.example.com
 IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
 sudo ip -6 neigh add proxy $IPV6 dev $IFACE
-sudo sysctl net.ipv6.conf.default.roxy_ndp=1
+sudo sysctl net.ipv6.conf.default.proxy_ndp=1
 sudo sysctl net.ipv6.conf.all.proxy_ndp=1
 sudo sysctl net.ipv6.conf.$IFACE.proxy_ndp=1
 ```
