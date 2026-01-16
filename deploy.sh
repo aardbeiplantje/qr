@@ -36,7 +36,7 @@ nw_name=dmz-ipv6-$APP_NAME
 if [ "${APP_DO_NETWORK:-0}" -eq 1 ]; then
     APP_IF_NAME=${APP_IF_NAME:-eno1}
     echo "checking for network, using $APP_IF_NAME"
-    IPV6_PREFIX_DEFAULT=$(ip -json -6 a l dev wlan1 scope global |jq -r '.[0].addr_info[0].local')
+    IPV6_PREFIX_DEFAULT=$(ip -json -6 a l dev $APP_IF_NAME scope global |jq -r '.[0].addr_info[0].local')
     IPV6_PREFIX_DEFAULT=${IPV6_PREFIX_DEFAULT%::*}:c::/112
     APP_IPV6_PREFIX=${APP_IPV6_PREFIX:-${IPV6_PREFIX_DEFAULT}}
     $c_cmd network rm $nw_name
