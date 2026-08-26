@@ -117,7 +117,20 @@ sub do_err {
     logger::error($err // $hdr_err // "error");
     $r->discard_request_body;
     $r->header_only;
-    $r->header_out("X-Error", "$hdr_err (Error Code: $error_code)");
+
+    my $safe_msg = $hdr_err;
+    if ($error_code =~ /^(ERR007|ERR008)$/) {
+        $safe_msg = "internal server error";
+    } elsif ($error_code eq 'ERR006') {
+        $safe_msg = "invalid JSON body";
+    } elsif ($error_code eq 'ERR010') {
+        $safe_msg = "invalid Accept header";
+    } elsif ($error_code eq 'ERR003') {
+        $safe_msg = "QR code generation failed";
+    } elsif ($error_code eq 'ERR005') {
+        $safe_msg = "invalid request";
+    }
+    $r->header_out("X-Error", "$safe_msg (Error Code: $error_code)");
     $r->status($status);
     $r->send_http_header;
     return OK;
