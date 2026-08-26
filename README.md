@@ -6,69 +6,36 @@ docker buildx bake
 
 # deploy
 
-* open port 80 to the host:
+Configure the following environment variables:
 
-This is done on a firewall. This is only needed for letsencrypt to verify the
-DNS entry, we will be running HTTPS only on port 443.
+**Required:**
+- `APP_DOMAIN` - Domain name (e.g., qr.example.com)
+- `IPV6_SUBNET` - IPv6 subnet for Docker network (e.g., 2001:db8:c::1:0/120)
+- `IPV6_GATEWAY` - IPv6 gateway (e.g., 2001:db8:c::1:1)
 
-* make the ipv6 network
+**Optional:**
+- `APP_NAME` - Service name (default: qr)
+- `APP_CERT_VOLUME` - Docker volume for TLS certs (default: certs-$APP_NAME)
+- `APP_IMAGE` / `DOCKER_IMAGE` - Image to deploy (default: local/qrencode/qrencode:latest)
+- `IPV6_ADDRESS` - Specific IPv6 address (default: resolved from APP_DOMAIN AAAA record)
+- `APP_DO_CERTBOT` - Run certbot to fetch certs (default: 0)
+- `APP_CERTBOT_MAIL` - Email for Let's Encrypt (required if APP_DO_CERTBOT=1)
+- `APP_CERTBOT_TAG` - Certbot image tag (default: latest)
 
-```
-IPV6_PREFIX=$(ip -6 r l dev eno1 proto kernel metric 100|awk -F/ '{print $1}')
-IPV6_PREFIX=${IPV6_PREFIX%::*}:c::/112
-docker network rm dmz-ipv6-qrencode
-docker network create \
-    --ipv6 dmz-ipv6-qrencode \
-    --subnet=$IPV6_PREFIX \
-    --ipv4=false \
-    --attachable=true \
-    --scope=local \
-    --driver=bridge \
-    -o com.docker.network.bridge.name=dlocal-dmz0 \
-    -o com.docker.network.container_iface_prefix=dmz \
-    -o com.docker.network.bridge.gateway_mode_ipv6=routed \
-    -o com.docker.network.bridge.enable_icc=true \
-    -o com.docker.network.bridge.enable_ip_masquerade=false \
-    -o com.docker.network.bridge.enable_ip6_masquerade=false \
-    -o com.docker.network.enable_ipv6=true \
-    -o com.docker.network.bridge.inhibit_ipv4=true \
-    -o com.docker.network.driver.mtu=1500 \
-    --ipam-driver default
-```
-
-* add the ipv6 neighbor to the host:
-
-```
-IFACE=eno1
-QRENCODE_DOMAIN=qrencode.example.com
-IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
-sudo ip -6 neigh add proxy $IPV6 dev $IFACE
-sudo sysctl net.ipv6.conf.default.proxy_ndp=1
-sudo sysctl net.ipv6.conf.all.proxy_ndp=1
-sudo sysctl net.ipv6.conf.$IFACE.proxy_ndp=1
-```
-
-* get the tls cert
-
-```
-QRENCODE_DOMAIN=qrencode.example.com
-IPV6=$(dig -6 $QRENCODE_DOMAIN -t AAAA +short)
-CERTBOT_MAIL=me@example.com
-docker run \
-    -p 80:80 \
-    --rm \
-    -e CERTBOT_MAIL="$CERTBOT_MAIL" \
-    --network dmz-ipv6-qrencode \
-    --ip6 $IPV6 \
-    -v qrencode-https-cert:/certs:rw\
-    local/certbot/certbot:latest \
-        certonly \
-            --agree-tos \
-            --domains "$QRENCODE_DOMAIN"
-```
-
-* deploy the service
+**Deploy:**
 
 ```
 bash deploy.sh
 ```
+
+The script will:
+1. Resolve APP_DOMAIN to IPv6 address
+2. Create IPv6-only Docker network
+3. Optionally run certbot for TLS certificates (if APP_DO_CERTBOT=1)
+4. Build images with buildx bake
+5. Start services with docker compose
+
+**Notes:**
+- IPv6-only deployment; DNS must resolve to AAAA record
+- Firewall: allow port 80 only for certbot validation (HTTPS runs on 443)
+- Container runs as nginx user, read-only filesystem, 32MB memory limit
