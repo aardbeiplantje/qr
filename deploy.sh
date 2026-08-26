@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-export APP_NAME=${APP_NAME?Need APP_NAME}
+export APP_NAME=${APP_NAME:-qr}
 export DOMAIN=${APP_DOMAIN?Need APP_DOMAIN}
 export CERT_VOLUME=${APP_CERT_VOLUME:-certs-$APP_NAME}
 export APP_IMAGE=${APP_IMAGE:-local/qrencode/qrencode:latest}
@@ -29,12 +29,13 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
     echo "checking for certificate"
     echo "running certbot"
     export APP_CERTBOT_MAIL=${APP_CERTBOT_MAIL?Need APP_CERTBOT_MAIL}
+    docker compose down
     docker run \
         -p 80:80 \
         --pull=always \
         --rm \
         -e CERTBOT_MAIL="$APP_CERTBOT_MAIL" \
-        --network $nw_name \
+        --network dmz-${APP_NAME}-ipv6 \
         --ip6 $IPV6 \
         --name certbot_$APP_NAME \
         -v ${CERT_VOLUME}:/certs:rw \
