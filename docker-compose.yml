@@ -6,16 +6,17 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,nodev,size=4k
-      - /run:rw,noexec,nosuid,nodev,size=4k
-      - /var/log/nginx:rw,noexec,nosuid,nodev,size=4k
+      - /tmp:rw,noexec,nosuid,nodev,size=4k,mode=1700,uid=100
+      - /run:rw,noexec,nosuid,nodev,size=4k,mode=1700,uid=100
+      - /var/log/nginx:rw,noexec,nosuid,nodev,size=4k,mode=1700,uid=100
+      - /var/lib/nginx/logs:rw,noexec,nosuid,nodev,size=4k,mode=1700,uid=100
     cap_drop:
       - ALL
+      - SYS_ADMIN
     cap_add:
       - SETUID
       - SETGID
       - NET_BIND_SERVICE
-      - CHOWN
     security_opt:
       - no-new-privileges:true
     mem_limit: 32m
