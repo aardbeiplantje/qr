@@ -30,6 +30,20 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
     echo "running certbot"
     export APP_CERTBOT_MAIL=${APP_CERTBOT_MAIL?Need APP_CERTBOT_MAIL}
     docker compose down
+    docker network create \
+        --driver bridge \
+        --ipv6 \
+        --ipam-driver default \
+        --ipam-subnet "$IPV6_SUBNET" \
+        --ipam-gateway "$IPV6_GATEWAY" \
+        --opt com.docker.network.bridge.gateway_mode_ipv6="routed" \
+        --opt com.docker.network.container_iface_prefix="dmz" \
+        --opt com.docker.network.bridge.enable_icc="true" \
+        --opt com.docker.network.bridge.enable_ip_masquerade="false" \
+        --opt com.docker.network.bridge.enable_ip6_masquerade="false" \
+        --opt com.docker.network.bridge.inhibit_ipv4="true" \
+        --opt com.docker.network.driver.mtu="1500" \
+        dmz-${APP_NAME}-ipv6 || true
     docker run \
         -p 80:80 \
         --pull=always \
