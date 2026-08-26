@@ -23,7 +23,7 @@ services:
     memswap_limit: 32m
     cpus: 0.5
     healthcheck:
-      test: ["CMD-SHELL", "curl -f -k https://$${APP_DOMAIN}/"]
+      test: ["CMD-SHELL", "curl -qsSLf https://${APP_DOMAIN}/ >/dev/null"]
       interval: 30s
       timeout: 5s
       retries: 3
