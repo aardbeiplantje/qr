@@ -30,6 +30,7 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
     echo "running certbot"
     export APP_CERTBOT_MAIL=${APP_CERTBOT_MAIL?Need APP_CERTBOT_MAIL}
     docker compose down
+    docker network rm dmz-${APP_NAME}-ipv6 2>/dev/null || true
     docker network create \
         --driver bridge \
         --ipv6 \
