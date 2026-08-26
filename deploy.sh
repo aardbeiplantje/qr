@@ -44,6 +44,7 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
         --opt com.docker.network.bridge.inhibit_ipv4="true" \
         --opt com.docker.network.driver.mtu="1500" \
         dmz-${APP_NAME}-ipv6 || true
+    docker rm -f certbot_$APP_NAME 2>/dev/null || true
     docker run \
         -p 80:80 \
         --pull=always \
