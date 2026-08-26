@@ -1,4 +1,30 @@
-**/*~
+# Ignore everything except what's needed for the build
+*
+!Dockerfile
+!nginx.conf
+!nginx.sh
+!site/
+!lib/
+!policy.xml
+!docker-compose.yml
+!deploy.sh
+!docker-bake.hcl
+
+# Ignore backup files
+*~
+
+# Ignore docs
 README.md
+AGENTS.md
 LICENSE
-docker-bake.hcl
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore CI
+.github/
+
+# Ignore build artifacts
+*.tar.gz
+*.tgz
