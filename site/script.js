@@ -1,11 +1,84 @@
+// Theme management
+const THEME_STORAGE_KEY = 'qr-theme';
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function getStoredTheme() {
+  return localStorage.getItem(THEME_STORAGE_KEY);
+}
+
+function setStoredTheme(theme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeButton(theme);
+}
+
+function updateThemeButton(theme) {
+  const icon = document.getElementById('themeIcon');
+  const text = document.getElementById('themeText');
+  if (!icon || !text) return;
+
+  const themes = {
+    light: { icon: '☀️', text: 'Light' },
+    dark: { icon: '🌙', text: 'Dark' },
+    system: { icon: '💻', text: 'System' }
+  };
+
+  const t = themes[theme] || themes.system;
+  icon.textContent = t.icon;
+  text.textContent = t.text;
+}
+
+function cycleTheme() {
+  const current = getStoredTheme() || 'system';
+  const order = ['system', 'light', 'dark'];
+  const currentIndex = order.indexOf(current);
+  const nextIndex = (currentIndex + 1) % order.length;
+  const nextTheme = order[nextIndex];
+  
+  setStoredTheme(nextTheme);
+  const effectiveTheme = nextTheme === 'system' ? getSystemTheme() : nextTheme;
+  applyTheme(effectiveTheme);
+}
+
+function initTheme() {
+  const stored = getStoredTheme();
+  let effectiveTheme;
+  
+  if (stored === 'system' || stored === null) {
+    effectiveTheme = getSystemTheme();
+  } else {
+    effectiveTheme = stored;
+  }
+  
+  applyTheme(effectiveTheme);
+  
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    const stored = getStoredTheme();
+    if (stored === 'system' || stored === null) {
+      applyTheme(e.matches ? 'dark' : 'light');
+    }
+  });
+  
+  // Theme toggle button
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', cycleTheme);
+  }
+}
+
 // Generate a CSRF token and set it in the hidden input field
 function generateCsrfToken() {
   const array = new Uint8Array(16);
   window.crypto.getRandomValues(array);
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
-
-document.getElementById('csrfToken').value = generateCsrfToken();
 
 // Ensure the print button is hidden initially
 const printButton = document.getElementById('printButton');
@@ -175,3 +248,9 @@ document.getElementById('printButton').addEventListener('click', function () {
     alert('Please generate a QR code before printing.');
   }
 });
+
+// Initialize theme on load
+document.addEventListener('DOMContentLoaded', initTheme);
+
+// Generate CSRF token immediately
+document.getElementById('csrfToken').value = generateCsrfToken();

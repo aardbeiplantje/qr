@@ -10,7 +10,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>QR Code Generator</h1>
+    <div class="header">
+      <h1>QR Code Generator</h1>
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+        <span id="themeIcon">🌙</span>
+        <span id="themeText">Theme</span>
+      </button>
+    </div>
     <form id="qrForm">
         <label for="data">Enter data to encode:</label>
         <textarea id="text" name="text" required></textarea>
