@@ -23,7 +23,7 @@ services:
     memswap_limit: 32m
     cpus: 0.5
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "--no-check-certificate", "https://localhost/"]
+      test: ["CMD-SHELL", "curl -f -k https://$${APP_DOMAIN}/"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -39,6 +39,7 @@ services:
       LC_ALL: C.UTF-8
       LANG: en_US.UTF-8
       PERL5LIB: ""
+      APP_DOMAIN: "${DOMAIN}"
 
 networks:
   dmz-ipv6:

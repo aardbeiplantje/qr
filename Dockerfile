@@ -8,7 +8,7 @@ RUN apk add --no-cache \
     perl-uri \
     perl-json \
     perl-json-xs \
-    wget
+    curl
 RUN apk add --no-cache libqrencode-tools
 RUN qrencode --version
 RUN apk add --no-cache imagemagick
