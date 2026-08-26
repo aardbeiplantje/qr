@@ -6,9 +6,7 @@ export CERT_VOLUME=${APP_CERT_VOLUME:-certs-$APP_NAME}
 export APP_IMAGE=${APP_IMAGE:-local/qrencode/qrencode:latest}
 export DOCKER_IMAGE=${DOCKER_IMAGE:-local/qrencode/qrencode:latest}
 
-WORKSPACE=$(readlink -f "${WORKSPACE:-${BASH_SOURCE%/*}}")
-WORKSPACE=${WORKSPACE%/*}
-export WORKSPACE
+export WORKSPACE=$(readlink -f "${WORKSPACE:-${BASH_SOURCE%/*}}")
 cd $WORKSPACE || exit $?
 
 echo "using: $APP_NAME"
@@ -45,11 +43,6 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
         --opt com.docker.network.bridge.inhibit_ipv4="true" \
         --opt com.docker.network.driver.mtu="1500" \
         dmz-${APP_NAME}-ipv6 || true
-    sudo sh -x -c "ip -6 neigh add proxy $IPV6 dev eno1; \
-        sysctl net.ipv6.conf.default.proxy_ndp=1; \
-        sysctl net.ipv6.conf.all.proxy_ndp=1; \
-        ip6tables -D DOCKER -s ::/0 -d $IPV6 -p tcp --dport 443 -j ACCEPT; \
-        ip6tables -I DOCKER -s ::/0 -d $IPV6 -p tcp --dport 443 -j ACCEPT"
     docker rm -f certbot_$APP_NAME 2>/dev/null || true
     docker run \
         -p 80:80 \
