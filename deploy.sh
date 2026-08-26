@@ -34,8 +34,8 @@ if [ "${APP_DO_CERTBOT:-0}" -eq 1 ]; then
         --driver bridge \
         --ipv6 \
         --ipam-driver default \
-        --ipam-subnet "$IPV6_SUBNET" \
-        --ipam-gateway "$IPV6_GATEWAY" \
+        --subnet "$IPV6_SUBNET" \
+        --gateway "$IPV6_GATEWAY" \
         --opt com.docker.network.bridge.gateway_mode_ipv6="routed" \
         --opt com.docker.network.container_iface_prefix="dmz" \
         --opt com.docker.network.bridge.enable_icc="true" \
