@@ -1,5 +1,8 @@
 group "default" {
-  targets = ["qrencode-development"]
+  targets = ["_local"]
+}
+group "local" {
+  targets = ["_local"]
 }
 group "release" {
   targets = ["qrencode"]
@@ -13,6 +16,32 @@ variable "DOCKER_REPOSITORY" {
 variable "DOCKER_TAG" {
   default = "latest"
 }
+variable "DOCKER_IMAGE_NAME" {
+  default = "qrencode"
+}
+variable "DOCKER_REPOSITORY_LOCAL" {
+  default = "qrencode"
+}
+
+target "_common" {
+  context = "."
+  dockerfile = "Dockerfile"
+  platforms = ["linux/amd64"]
+  networks = ["host"]
+  buildkit = true
+}
+
+target "_local" {
+  inherits = ["_common"]
+  target = "runtime"
+  tags = [
+    "local/${DOCKER_REPOSITORY_LOCAL}/${DOCKER_IMAGE_NAME}:${DOCKER_TAG}",
+  ]
+  output = [
+    "type=docker,name=local/${DOCKER_REPOSITORY_LOCAL}/${DOCKER_IMAGE_NAME}:${DOCKER_TAG}"
+  ]
+}
+
 target "qrencode" {
   pull = true
   name = "qrencode-${env}"
@@ -44,28 +73,6 @@ target "qrencode" {
   networks = ["host"]
   platforms = [
     "linux/arm/v6",
-    "linux/amd64"
-  ]
-}
-
-target "qrencode-development" {
-  pull = true
-  progress = ["plain", "tty"]
-  tags = [
-    "local/qrencode/qrencode:${DOCKER_TAG}",
-  ]
-  output = [
-    "type=cacheonly",
-    "type=docker"
-  ]
-  target = "runtime"
-  buildkit = true
-  context = "."
-  dockerfile = "Dockerfile"
-  networks = ["host"]
-  attest = [
-  ]
-  platforms = [
     "linux/amd64"
   ]
 }
