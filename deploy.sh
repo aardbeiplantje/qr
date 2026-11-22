@@ -63,7 +63,7 @@ else
 fi
 
 echo "building images with buildx bake"
-docker buildx bake -f docker-bake.hcl local || exit $?
+docker buildx bake --pull -f docker-bake.hcl local || exit $?
 
 echo "starting with docker compose"
 APP_NAME=$APP_NAME \
